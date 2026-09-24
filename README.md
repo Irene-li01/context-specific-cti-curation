@@ -1,6 +1,19 @@
-# CCTI — Curated Cyber Threat Intelligence
+# CCTI — Context-Specific Cyber Threat Intelligence Curation
 
-Organisations drown in threat intelligence that mostly doesn't apply to them. CCTI fixes that by building an end-to-end pipeline that fetches live threat data from MISP, extracts meaningful entities, scores each threat against an organisation's specific profile, and surfaces the most relevant ones through a web dashboard and REST API.
+Organisations drown in threat intelligence that mostly doesn't apply to them. CCTI addresses this with an end-to-end pipeline that fetches threat data from MISP, extracts meaningful entities, scores threats against an organisation's profile, and presents relevant results through a web dashboard and REST API.
+
+This is Aini Li's portfolio copy of a five-person team project. The system described below represents the team's combined work; my contributions are outlined here.
+
+---
+
+## My Role & Contributions
+
+**Aini Li (Irene) — Scrum Master & Pipeline Contributor**
+
+- Configured the MISP deployment and threat feeds used by the pipeline.
+- Contributed to filtering optimisation and the named-entity recognition workflow.
+- Worked on the dashboard and deployment.
+- Coordinated team progress and helped present the final demonstration.
 
 ---
 
@@ -31,16 +44,8 @@ Entity confidence scores from the NER step are propagated into the scoring — r
 
 Before running anything, you need:
 
-1. **A MISP instance** — the pipeline fetches live threat data from a cloud-hosted MISP instance that we deployed and configured based on the official MISP guidelines. In this project, `misp.cti-lab.me` is used as the CTI data source. To use your own instance, set `MISP_BASE_URL` in `.env`.
-
-2. **MISP API key** — set `MISP_API_KEY` in your `.env` file (copy from `.env.example`).
-   - Open `https://misp.cti-lab.me`.
-   - Log in with the admin credentials provided by the course or lab supervisor.
-   - Go to **Admin → Auth keys → Add authentication key**.
-   - Copy the generated key into `.env`:
-     ```
-     MISP_API_KEY=replace-with-your-misp-api-key
-     ```
+1. **A MISP instance** — The pipeline fetches threat data from a MISP instance you are authorised to use. Set its URL as MISP_BASE_URL in your local .env file.
+2. **A MISP API key** — Create an API key for your own MISP account and set it as MISP_API_KEY in .env (using .env.example as a template). Never commit .env or an API key to this repository.
 
 3. **SecBERT model weights** — `model.safetensors` (331MB) is excluded from the repository due to size. To use `--use-secbert`, either retrain the model or obtain the weights file and place it in `Machine learning/secbert_cti_model_final/`. The pipeline runs fine without it using spaCy only.
 
@@ -263,7 +268,7 @@ SecBERT (`jackaduma/SecBERT`) was fine-tuned on a combined dataset of 4,856 sent
 | Name | Role |
 |------|------|
 | Maaz Arshad Beg | Technical lead, system integration, pipeline, security |
-| Aini Li | Filtering optimisation, dashboard, deployment |
+| Aini Li | Scrum Master, Filtering optimisation, dashboard, deployment |
 | Zexin Zhao | SecBERT model training, ML pipeline |
 | Jiarui Li | Organisation profiling, frontend |
 | Freshin Francis | Recommendation engine, similarity matching, frontend development |
