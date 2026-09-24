@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "org_id": "ORG-HC-003",
+    "last_updated": "2026-05-06T00:00:00Z"
+  },
+  "organizational_context": {
+    "industry_sector": "Healthcare",
+    "geographic_location": ["Australia", "New Zealand"]
+  },
+  "technology_stack": {
+    "inventory_type": "CPE_List",
+    "assets": [
+      { "asset_name": "SAP ERP", "cpe": "cpe:2.3:a:sap:erp:6.0:*:*:*:*:*:*:*", "criticality": 5 },
+      { "asset_name": "Siemens MES", "cpe": "cpe:2.3:a:siemens:opcenter_execution_pharma:-:*:*:*:*:*:*:*", "criticality": 5 },
+      { "asset_name": "Microsoft SQL Server", "cpe": "cpe:2.3:a:microsoft:sql_server:2019:*:*:*:*:*:*:*", "criticality": 4 },
+      { "asset_name": "Rockwell Automation PLC", "cpe": "cpe:2.3:h:rockwellautomation:controllogix:-:*:*:*:*:*:*:*", "criticality": 5 }
+    ]
+  },
+  "risk_profile": {
+    "critical_assets": ["Drug Manufacturing Systems", "Clinical Trial Data", "Supply Chain Management"],
+    "threat_landscape": ["T1486 - Data Encrypted for Impact", "T1566 - Phishing", "Black Vine", "APT28", "ransomware", "phishing"]
+  }
+}

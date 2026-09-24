@@ -1,0 +1,22 @@
+{
+  "metadata": {
+    "org_id": "ORG-EN-003",
+    "last_updated": "2026-05-06T00:00:00Z"
+  },
+  "organizational_context": {
+    "industry_sector": "Energy",
+    "geographic_location": ["Queensland", "South Australia"]
+  },
+  "technology_stack": {
+    "inventory_type": "CPE_List",
+    "assets": [
+      { "asset_name": "SMA Solar Inverter", "cpe": "cpe:2.3:h:sma:sunny_tripower_25000tl:-:*:*:*:*:*:*:*", "criticality": 4 },
+      { "asset_name": "Schneider Electric SCADA", "cpe": "cpe:2.3:a:schneider-electric:ecostruxure_geo_scada_expert:2021:*:*:*:*:*:*:*", "criticality": 5 },
+      { "asset_name": "Microsoft Windows Server", "cpe": "cpe:2.3:o:microsoft:windows_server_2019:-:*:*:*:*:*:*:*", "criticality": 3 }
+    ]
+  },
+  "risk_profile": {
+    "critical_assets": ["Solar Farm Control Systems", "Grid Interconnect Points", "SCADA Network"],
+    "threat_landscape": ["T1566 - Phishing", "T1486 - Data Encrypted for Impact", "Sofacy", "Turla", "ransomware", "phishing"]
+  }
+}

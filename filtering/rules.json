@@ -1,0 +1,102 @@
+{
+  "_meta": {
+    "schema_version": 1,
+    "description": "Declarative noise-reduction + UI rules for the CCTI pipeline. Edit this file to tune behaviour without touching code.",
+    "owner": "CCTI engineering"
+  },
+
+  "noise_categories": [
+    "Person",
+    "Internal reference",
+    "Support Tool"
+  ],
+
+  "noise_type_prefixes": [
+    "whois-",
+    "email-subject",
+    "email-message-id",
+    "email-header",
+    "email-reply-to",
+    "phone-number",
+    "comment",
+    "named pipe"
+  ],
+
+  "ip_types": [
+    "ip-src",
+    "ip-dst",
+    "ip-src|port",
+    "ip-dst|port"
+  ],
+
+  "url_like_types": [
+    "url",
+    "uri",
+    "domain",
+    "hostname"
+  ],
+
+  "hash_types": [
+    "md5",
+    "sha1",
+    "sha224",
+    "sha256",
+    "sha384",
+    "sha512",
+    "ssdeep",
+    "imphash",
+    "tlsh"
+  ],
+
+  "defang_patterns": [
+    {"pattern": "\\bhxxp(s?)://", "replacement": "http\\1://", "ignore_case": true},
+    {"pattern": "\\bfxp://",     "replacement": "ftp://",     "ignore_case": true},
+    {"pattern": "\\[\\.\\]",     "replacement": ".",          "ignore_case": false},
+    {"pattern": "\\[:\\]",       "replacement": ":",          "ignore_case": false},
+    {"pattern": "\\[@\\]",       "replacement": "@",          "ignore_case": false},
+    {"pattern": "\\(dot\\)",     "replacement": ".",          "ignore_case": true},
+    {"pattern": "\\(at\\)",      "replacement": "@",          "ignore_case": true}
+  ],
+
+  "filter_defaults": {
+    "min_value_length": 3,
+    "max_value_length": 4096,
+    "require_to_ids": false,
+    "drop_private_ips": true,
+    "dedup_strategy": "latest"
+  },
+
+  "severity": {
+    "high_risk_categories": [
+      "Payload delivery",
+      "Payload installation",
+      "Persistence mechanism",
+      "Financial fraud"
+    ],
+    "medium_risk_categories": [
+      "Network activity",
+      "Artifacts dropped",
+      "Attribution",
+      "Targeting data"
+    ],
+    "high_risk_tags": [
+      "tlp:red",
+      "apt",
+      "ransomware"
+    ]
+  },
+
+  "ner_label_keywords": {
+    "threat_actors": ["threat", "actor", "apt"],
+    "malware":       ["malware", "tool"],
+    "industries":    ["industry", "sector"]
+  },
+
+  "ui": {
+    "default_page_size": 50,
+    "max_page_size": 500,
+    "stats_top_types": 25,
+    "sidebar_top_categories": 12,
+    "entities_per_bucket": 50
+  }
+}

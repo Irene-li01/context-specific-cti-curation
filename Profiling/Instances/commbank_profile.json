@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "org_id": "ORG-FB-001",
+    "last_updated": "2026-05-06T00:00:00Z"
+  },
+  "organizational_context": {
+    "industry_sector": "Finance",
+    "geographic_location": ["Australia", "New Zealand"]
+  },
+  "technology_stack": {
+    "inventory_type": "CPE_List",
+    "assets": [
+      { "asset_name": "IBM Mainframe z15", "cpe": "cpe:2.3:h:ibm:z15:-:*:*:*:*:*:*:*", "criticality": 5 },
+      { "asset_name": "SAP Banking Core", "cpe": "cpe:2.3:a:sap:banking_services:8.0:*:*:*:*:*:*:*", "criticality": 5 },
+      { "asset_name": "Palo Alto Firewall", "cpe": "cpe:2.3:h:paloaltonetworks:pa-5280:-:*:*:*:*:*:*:*", "criticality": 4 },
+      { "asset_name": "Microsoft Active Directory", "cpe": "cpe:2.3:a:microsoft:active_directory:-:*:*:*:*:*:*:*", "criticality": 4 }
+    ]
+  },
+  "risk_profile": {
+    "critical_assets": ["Core Banking System", "Customer PII Database", "Payment Processing Network"],
+    "threat_landscape": ["T1110 - Brute Force", "T1566 - Phishing", "FIN7", "ransomware", "phishing"]
+  }
+}

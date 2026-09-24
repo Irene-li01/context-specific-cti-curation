@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "org_id": "ORG-CL-002",
+    "last_updated": "2026-05-06T00:00:00Z"
+  },
+  "organizational_context": {
+    "industry_sector": "Other",
+    "geographic_location": ["Australia"]
+  },
+  "technology_stack": {
+    "inventory_type": "CPE_List",
+    "assets": [
+      { "asset_name": "NCR POS System", "cpe": "cpe:2.3:a:ncr:counterpoint:-:*:*:*:*:*:*:*", "criticality": 5 },
+      { "asset_name": "SAP Retail", "cpe": "cpe:2.3:a:sap:retail:-:*:*:*:*:*:*:*", "criticality": 4 },
+      { "asset_name": "Cisco Meraki Network", "cpe": "cpe:2.3:h:cisco:meraki_mr:-:*:*:*:*:*:*:*", "criticality": 3 },
+      { "asset_name": "Microsoft Azure", "cpe": "cpe:2.3:a:microsoft:azure:-:*:*:*:*:*:*:*", "criticality": 4 }
+    ]
+  },
+  "risk_profile": {
+    "critical_assets": [
+      "Payment Card Data",
+      "Cold Chain Monitoring Systems",
+      "Inventory Management",
+      "POS Payment Terminals",
+      "Customer Loyalty Database"
+    ],
+    "threat_landscape": [
+      "T1566 - Phishing",
+      "T1486 - Data Encrypted for Impact",
+      "T1190 - Exploit Public-Facing Application",
+      "T1110 - Brute Force",
+      "FIN7",
+      "POS malware",
+      "payment card theft",
+      "retail phishing",
+      "supply chain compromise"
+    ]
+  }
+}

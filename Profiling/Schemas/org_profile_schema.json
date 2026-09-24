@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OrganizationProfile",
+  "description": "A comprehensive model to enable personalized CTI curation and recommendation.",
+  "type": "object",
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "org_id": { "type": "string", "description": "Unique identifier for the organization." },
+        "last_updated": { "type": "string", "format": "date-time" },
+        "version": { "type": "string", "default": "1.0.0" }
+      },
+      "required": ["org_id", "last_updated"]
+    },
+    "organizational_context": {
+      "type": "object",
+      "properties": {
+        "industry_sector": { 
+          "type": "string", 
+          "enum": ["Energy", "Finance", "Healthcare", "Government", "Transportation", "Other"],
+          "description": "Primary industry sector for context-based filtering." 
+        },
+        "geographic_location": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Regions where the organization operates (e.g., South Australia)."
+        }
+      }
+    },
+    "technology_stack": {
+      "type": "object",
+      "description": "The formalized inventory of assets used for threat matching[cite: 4, 8].",
+      "properties": {
+        "inventory_type": { "type": "string", "enum": ["SBOM", "CPE_List", "Manual"] },
+        "assets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "asset_name": { "type": "string" },
+              "cpe": { "type": "string", "description": "Common Platform Enumeration (CPE) string for standardized matching." },
+              "criticality": { "type": "integer", "minimum": 1, "maximum": 5 }
+            },
+            "required": ["asset_name", "cpe"]
+          }
+        }
+      }
+    },
+    "risk_profile": {
+      "type": "object",
+      "properties": {
+        "critical_assets": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Key digital or physical assets identified as 'Crown Jewels'."
+        },
+        "threat_landscape": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Known threat actors or attack patterns (e.g., MITRE ATT&CK techniques) of concern[cite: 158]."
+        }
+      }
+    },
+    "cybersecurity_capability": {
+      "type": "object",
+      "properties": {
+        "maturity_level": { "type": "string", "enum": ["Initial", "Defined", "Managed", "Optimized"] },
+        "stack_tools": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "Existing security tools like SIEM, IDS, or MISP[cite: 7, 162]." 
+        }
+      }
+    }
+  },
+  "required": ["metadata", "organizational_context", "technology_stack", "risk_profile"]
+}

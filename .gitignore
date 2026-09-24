@@ -1,0 +1,70 @@
+.DS_Store
+
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+
+
+# Large cleaned data outputs (regenerate with filtering/cti_filter.py)
+data/cleaned/*.json
+data/misp/misp_raw_events.json
+
+# Recommendations (regenerate by running pipeline.py)
+data/recommendations/recommendations_*.json
+data/recommendations/evaluation_report_*.json
+data/recommendations/evaluation_report_*.txt
+
+# Legacy MISP export — may contain sensitive threat data
+data/misp/misp_categorized.xlsx
+
+# NER pipeline outputs (regenerate with ner/ner_cti.py)
+ner/ner_results_v3.json
+ner/ner_results_v3_normalised.json
+ner/cti_ner_input.json
+ner/cti_ner_input_stats.json
+ner/clean_cti_dataset.csv
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# ChromaDB vector store (regenerate with data_ingestor.py)
+chroma_db/
+vector_store/
+cti_microservice_v1/vector_store/
+
+# Model/cache output
+.cache/
+models/
+
+# Large trained model weights (regenerate by running train_secbert.py)
+Machine learning/secbert_cti_model_final/model.safetensors
+Machine learning/secbert_cti_model_final/training_args.bin
+
+
+Machine learning/secbert_cti_model_final/checkpoint-*
+Machine learning/combined_train_data.json
+
+# STIX bundle (regenerate with data_ingestor.py)
+cti_microservice_v1/curated_threats_stix3.json
+
+# NER timing benchmarks (not pipeline outputs)
+ner/ner_results_secbert_timed.json
+ner/ner_results_spacy_timed.json
+
+# Temporary dev scripts
+_patch_modal.py
+
+# Large binary meeting recordings and presentation files
+Presentation recordings/
+Sprint Meetings/
+

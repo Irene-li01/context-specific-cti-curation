@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "org_id": "ORG-FB-002",
+    "last_updated": "2026-05-06T00:00:00Z"
+  },
+  "organizational_context": {
+    "industry_sector": "Finance",
+    "geographic_location": ["Global"]
+  },
+  "technology_stack": {
+    "inventory_type": "CPE_List",
+    "assets": [
+      { "asset_name": "Stripe Payment Gateway", "cpe": "cpe:2.3:a:stripe:stripe:-:*:*:*:*:*:*:*", "criticality": 5 },
+      { "asset_name": "PostgreSQL Database", "cpe": "cpe:2.3:a:postgresql:postgresql:14.0:*:*:*:*:*:*:*", "criticality": 4 },
+      { "asset_name": "AWS Cloud Infrastructure", "cpe": "cpe:2.3:a:amazon:aws:-:*:*:*:*:*:*:*", "criticality": 5 },
+      { "asset_name": "Node.js API Server", "cpe": "cpe:2.3:a:nodejs:node.js:18.0:*:*:*:*:*:*:*", "criticality": 3 }
+    ]
+  },
+  "risk_profile": {
+    "critical_assets": ["Payment Processing API", "Merchant Transaction Records", "Fraud Detection Engine"],
+    "threat_landscape": ["T1110 - Brute Force", "T1190 - Exploit Public-Facing Application", "FIN7", "ransomware", "phishing"]
+  }
+}

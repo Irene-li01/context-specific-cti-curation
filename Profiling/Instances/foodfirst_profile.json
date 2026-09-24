@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "org_id": "ORG-CL-003",
+    "last_updated": "2026-05-06T00:00:00Z"
+  },
+  "organizational_context": {
+    "industry_sector": "Other",
+    "geographic_location": ["Australia", "Southeast Asia"]
+  },
+  "technology_stack": {
+    "inventory_type": "CPE_List",
+    "assets": [
+      { "asset_name": "Rockwell Automation PLC", "cpe": "cpe:2.3:h:rockwellautomation:controllogix:-:*:*:*:*:*:*:*", "criticality": 5 },
+      { "asset_name": "SAP ERP", "cpe": "cpe:2.3:a:sap:erp:6.0:*:*:*:*:*:*:*", "criticality": 4 },
+      { "asset_name": "Microsoft Windows Server", "cpe": "cpe:2.3:o:microsoft:windows_server_2019:-:*:*:*:*:*:*:*", "criticality": 3 },
+      { "asset_name": "Siemens S7 PLC", "cpe": "cpe:2.3:h:siemens:simatic_s7-300:-:*:*:*:*:*:*:*", "criticality": 5 }
+    ]
+  },
+  "risk_profile": {
+    "critical_assets": ["Food Manufacturing OT Systems", "Supply Chain Data", "Cold Storage Controls"],
+    "threat_landscape": ["T1486 - Data Encrypted for Impact", "T1566 - Phishing", "ransomware", "phishing", "Turla"]
+  }
+}

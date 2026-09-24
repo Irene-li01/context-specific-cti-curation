@@ -1,0 +1,35 @@
+x-ccti-common: &ccti-common
+  build: .
+  env_file:
+    - path: .env
+      required: false
+  volumes:
+    - ./data:/app/data
+    - ./ner:/app/ner
+    - ./filtering:/app/filtering
+    - ./Profiling:/app/Profiling
+    - ./pipeline.py:/app/pipeline.py
+    - ./normalise_techniques.py:/app/normalise_techniques.py
+    - ./recommendation_engine.py:/app/recommendation_engine.py
+    - ./evaluation.py:/app/evaluation.py
+    - ./stix_generator.py:/app/stix_generator.py
+    - ./crypto_utils.py:/app/crypto_utils.py
+    - ./cti_microservice_v1/vector_store:/app/cti_microservice_v1/vector_store
+    - ./cti_microservice_v1/static:/app/cti_microservice_v1/static
+    - ./cti_microservice_v1/rag_engine.py:/app/cti_microservice_v1/rag_engine.py
+    - ./cti_microservice_v1/data_ingestor.py:/app/cti_microservice_v1/data_ingestor.py
+    - ./cti_microservice_v1/config.py:/app/cti_microservice_v1/config.py
+    - ./cti_microservice_v1/api.py:/app/cti_microservice_v1/api.py
+
+services:
+  api:
+    <<: *ccti-common
+    ports:
+      - "${API_PORT:-8000}:8000"
+    restart: unless-stopped
+
+  pipeline:
+    <<: *ccti-common
+    command: ["python", "pipeline.py"]
+    profiles:
+      - jobs

@@ -1,0 +1,2031 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
+<title>CCTI — Threat Intelligence Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/force-graph"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+
+<style>
+/* =========================================================
+   RESET & TOKENS
+   ========================================================= */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#040912;
+  --bg1:#080f1d;
+  --bg2:#0d1626;
+  --bg3:#111e32;
+  --bg4:#172540;
+  --border:#1c2d4a;
+  --border-hi:#243a5e;
+  --text-primary:#dce8f8;
+  --text-secondary:#6b87ad;
+  --text-muted:#2e4a6e;
+  --accent:#00b4d8;
+  --accent-dim:#003d4d;
+  --green:#22c55e;
+  --green-dim:rgba(34,197,94,0.12);
+  --amber:#f59e0b;
+  --amber-dim:rgba(245,158,11,0.12);
+  --red:#ef4444;
+  --red-dim:rgba(239,68,68,0.12);
+  --purple:#a78bfa;
+  --font-ui:'Space Grotesk',system-ui,sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+  --r:6px;
+  --r-lg:10px;
+}
+
+html,body{height:100%;background:var(--bg0);color:var(--text-primary);font-family:var(--font-ui);font-size:14px;line-height:1.5;overflow:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(circle,var(--bg3) 1px,transparent 1px);background-size:28px 28px;opacity:.18;pointer-events:none;z-index:0}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:4px}
+::-webkit-scrollbar-track{background:transparent}
+
+.app{position:relative;z-index:1;display:grid;grid-template-rows:56px 1fr 44px;height:100vh}
+
+/* =========================================================
+   TOPBAR
+   ========================================================= */
+.topbar{display:flex;align-items:center;gap:16px;padding:0 20px;background:var(--bg1);border-bottom:1px solid var(--border);position:relative;z-index:10}
+.topbar-logo{display:flex;align-items:center;gap:10px}
+.logo-chip{font-family:var(--font-mono);font-size:10px;font-weight:600;background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent);border-radius:4px;padding:3px 8px;letter-spacing:1px}
+.logo-name{font-size:15px;font-weight:600;color:var(--text-primary);letter-spacing:-.2px}
+.logo-name span{color:var(--text-muted);font-weight:400;font-size:12px;margin-left:6px}
+.topbar-divider{width:1px;height:24px;background:var(--border);margin:0 4px}
+.topbar-meta{font-family:var(--font-mono);font-size:10px;color:var(--text-muted)}
+.topbar-spacer{flex:1}
+.topbar-status{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:4px 12px}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.btn{font-family:var(--font-ui);font-size:12px;font-weight:500;background:var(--bg3);border:1px solid var(--border-hi);color:var(--text-secondary);border-radius:var(--r);padding:6px 14px;cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--bg4);color:var(--text-primary);border-color:var(--accent)}
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+.body-grid{display:grid;grid-template-columns:256px 1fr;overflow:hidden;position:relative}
+.sidebar{background:var(--bg1);border-right:1px solid var(--border);overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:16px}
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
+.panel-head{font-family:var(--font-mono);font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);padding:10px 14px 8px;border-bottom:1px solid var(--border)}
+.panel-body{padding:12px 14px}
+
+/* Stats */
+.stat-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)}
+.stat-row:last-child{border-bottom:none}
+.stat-label{font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:6px}
+.stat-val{font-family:var(--font-mono);font-size:12px;color:var(--text-primary);font-weight:500}
+.sev-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot-critical{background:var(--red)}.dot-high{background:var(--amber)}.dot-medium{background:#f59e0b}.dot-low{background:var(--green)}
+.cat-item{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)}
+.cat-item:last-child{border-bottom:none}
+.cat-name{font-size:11px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px}
+.cat-count{font-family:var(--font-mono);font-size:10px;color:var(--text-muted)}
+
+/* Entities Checkbox Lists */
+details summary{cursor:pointer;font-size:11px;color:var(--accent);padding:4px 0;list-style:none;display:flex;align-items:center;gap:6px;user-select:none;}
+details summary::before{content:'▸';font-size:8px;color:var(--text-muted);transition:transform .15s}
+details[open] > summary::before{transform:rotate(90deg)}
+.ent-list{padding:6px 0 4px 10px;list-style:none;display:flex;flex-direction:column;gap:3px}
+.ent-list li{font-size:11px;color:var(--text-secondary);padding:1px 0}
+.ent-label{display:flex;align-items:flex-start;gap:6px;cursor:pointer;transition:color .15s;line-height:1.3;}
+.ent-label:hover{color:var(--text-primary)}
+.ent-label input[type="checkbox"]{accent-color:var(--accent);cursor:pointer;margin-top:2px;background:var(--bg3);border:1px solid var(--border);}
+.sub-cat-label{font-family:var(--font-mono);font-size:9px;color:var(--text-muted);margin-top:8px;margin-bottom:4px;letter-spacing:1px;text-transform:uppercase;}
+.mini-search{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text-primary);font-family:var(--font-mono);font-size:10px;padding:5px 8px;border-radius:4px;margin-bottom:6px;outline:none;transition:border-color .15s;}
+.mini-search:focus{border-color:var(--accent)}
+
+/* Org Profile Sidebar Elements */
+.org-name-large{font-size:18px;font-weight:600;color:var(--accent);margin-bottom:2px}
+.org-ind{font-size:11px;color:var(--text-muted);margin-bottom:12px}
+.org-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px}
+.org-row:last-child{border-bottom:none}
+.org-key{color:var(--text-muted)}
+.org-val{font-family:var(--font-mono);color:var(--text-secondary)}
+.asset-chip{display:inline-block;font-family:var(--font-mono);font-size:9px;background:var(--bg3);border:1px solid var(--border-hi);color:var(--text-secondary);border-radius:4px;padding:3px 8px;margin:2px}
+.mitre-chip{display:inline-block;font-family:var(--font-mono);font-size:9px;font-weight:500;background:var(--amber-dim);border:1px solid rgba(245,158,11,.25);color:var(--amber);border-radius:4px;padding:3px 8px;margin:2px}
+
+/* =========================================================
+   MAIN CONTENT
+   ========================================================= */
+.main{display:flex;flex-direction:column;overflow:hidden;background:var(--bg0)}
+.toolbar{display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px;padding:14px 20px;background:var(--bg1);border-bottom:1px solid var(--border)}
+.field-wrap{display:flex;flex-direction:column;gap:4px}
+.field-label{font-family:var(--font-mono);font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted)}
+select,input[type=text]{font-family:var(--font-mono);font-size:12px;background:var(--bg2);border:1px solid var(--border-hi);color:var(--text-primary);border-radius:var(--r);padding:7px 12px;outline:none;transition:border-color .15s}
+select:focus,input:focus{border-color:var(--accent)}
+select.org-select{background:var(--accent-dim);border-color:rgba(0,180,216,.4);color:var(--accent);font-weight:500;min-width:260px;cursor:pointer}
+input[type=text]{width:220px}
+
+/* Active Filters Pills */
+.active-filters{padding:10px 20px;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.filter-pill{display:inline-flex;align-items:center;gap:6px;background:var(--accent-dim);border:1px solid rgba(0,180,216,.3);color:var(--text-primary);font-family:var(--font-mono);font-size:10px;padding:4px 10px;border-radius:12px;}
+.filter-pill span{color:var(--accent)}
+.pill-close{cursor:pointer;color:var(--text-secondary);font-size:12px;line-height:1;transition:color .15s;margin-left:2px;}
+.pill-close:hover{color:var(--red)}
+.clear-all{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);cursor:pointer;margin-left:auto;transition:color .15s}
+.clear-all:hover{color:var(--red)}
+
+.content-scroll{flex:1;overflow-y:auto;padding:20px}
+.analytics-container { display: flex; flex-direction: column; gap: 24px; padding-bottom: 20px; }
+
+/* =========================================================
+   THREATS TABLE
+   ========================================================= */
+.threats-wrap{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
+.threats-table{width:100%;border-collapse:collapse;font-size:12px}
+.threats-table thead tr{background:var(--bg2);border-bottom:1px solid var(--border)}
+.threats-table th{font-family:var(--font-mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);padding:10px 14px;text-align:left;font-weight:500}
+.threats-table tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+.threats-table tbody tr:hover{background:var(--bg2)}
+.threats-table td{padding:9px 14px;vertical-align:middle}
+.cell-mono{font-family:var(--font-mono);color:var(--accent);font-size:11px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cell-muted{color:var(--text-secondary);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cell-dim{color:var(--text-muted);font-size:11px}
+
+/* Severity badges */
+.sev{display:inline-flex;align-items:center;gap:4px;font-family:var(--font-mono);font-size:9px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;padding:3px 8px;border-radius:4px;white-space:nowrap}
+.sev-critical{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.sev-high{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.sev-medium{background:rgba(234,179,8,.1);color:#eab308;border:1px solid rgba(234,179,8,.25)}
+.sev-low{background:var(--green-dim);color:var(--green);border:1px solid rgba(34,197,94,.25)}
+.sev-unknown{background:var(--bg3);color:var(--text-muted);border:1px solid var(--border)}
+
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--bg2);border-top:1px solid var(--border)}
+.page-label{font-family:var(--font-mono);font-size:11px;color:var(--text-muted)}
+.page-btn{font-family:var(--font-mono);font-size:11px;background:var(--bg3);border:1px solid var(--border-hi);color:var(--text-secondary);border-radius:var(--r);padding:5px 14px;cursor:pointer;transition:all .15s}
+.page-btn:hover:not(:disabled){background:var(--bg4);color:var(--text-primary)}
+
+/* =========================================================
+   RECOMMENDATIONS (Org View)
+   ========================================================= */
+.rec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.rec-title{font-size:16px;font-weight:600;color:var(--text-primary)}
+.rec-title span{color:var(--text-muted);font-size:12px;font-weight:400;margin-left:8px}
+.overlap-pill{font-family:var(--font-mono);font-size:10px;background:var(--green-dim);border:1px solid rgba(34,197,94,.3);color:var(--green);border-radius:20px;padding:3px 12px}
+.rec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:14px}
+.rec-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px 20px 42px;position:relative;overflow:hidden;transition:border-color .2s,transform .15s,box-shadow .2s;cursor:pointer;user-select:none}
+.rec-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 16px rgba(58,134,255,0.15)}
+.rec-card:focus{outline:1px solid var(--accent);outline-offset:2px}
+.rec-detail-btn{position:absolute;right:18px;bottom:14px;font-family:var(--font-mono);font-size:9px;letter-spacing:.8px;text-transform:uppercase;background:var(--bg3);border:1px solid var(--border-hi);color:var(--accent);border-radius:var(--r);padding:5px 9px;cursor:pointer;transition:all .15s}
+.rec-detail-btn:hover{background:var(--accent-dim);border-color:var(--accent);color:var(--text-primary)}
+.rec-top{display:flex;align-items:center;gap:8px;margin-bottom:10px;position:relative;z-index:1}
+.rec-rank-badge{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:10px;font-weight:600;flex-shrink:0}
+.rank-critical{background:var(--red-dim);color:var(--red)}
+.rank-high{background:var(--amber-dim);color:var(--amber)}
+.rank-medium{background:rgba(234,179,8,.1);color:#eab308}
+.rank-low{background:var(--green-dim);color:var(--green)}
+.rec-event-id{font-family:var(--font-mono);font-size:9px;color:var(--text-muted);margin-left:auto}
+.rec-score{font-family:var(--font-mono);font-size:15px;font-weight:600;margin-left:10px}
+.score-critical{color:var(--red)}.score-high{color:var(--amber)}.score-medium{color:#eab308}.score-low{color:var(--green)}
+.rec-title-text{font-size:13px;font-weight:500;color:var(--text-primary);line-height:1.45;margin-bottom:6px;padding-right:40px}
+.rec-summary{font-size:11px;color:var(--text-secondary);line-height:1.6;margin-bottom:12px;border-left:2px solid var(--border-hi);padding-left:10px}
+
+.score-bar-bg{height:4px;background:var(--bg3);border-radius:2px;display:flex;overflow:hidden;margin-bottom:6px}
+.bar-cosine{background:#378ADD}.bar-cpe{background:#1D9E75}.bar-mitre{background:var(--amber)}
+.score-breakdown{display:flex;gap:12px}
+.bd-item{font-family:var(--font-mono);font-size:9px;color:var(--text-muted);display:flex;align-items:center;gap:3px}
+.bd-dot{width:5px;height:5px;border-radius:1px;flex-shrink:0}
+.ent-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.ent-chip{font-family:var(--font-mono);font-size:9px;padding:2px 7px;border-radius:3px;  border:1px solid;max-width:100%;  white-space:normal;overflow-wrap:anywhere;  word-break:break-word;line-height:1.35}
+.ent-actor{background:var(--red-dim);border-color:rgba(239,68,68,.25);color:var(--red)}
+.ent-tech{background:rgba(88,166,255,.08);border-color:rgba(88,166,255,.2);color:#58a6ff}
+.ent-attack{background:var(--amber-dim);border-color:rgba(245,158,11,.25);color:var(--amber)}
+
+.detail-overlay{position:fixed;inset:0;background:rgba(4,9,18,.78);z-index:1200;display:none;align-items:center;justify-content:center;padding:24px}
+.detail-overlay.open{display:flex}
+.detail-modal{width:min(1320px,96vw);max-height:88vh;background:var(--bg1);border:1px solid var(--border-hi);border-radius:var(--r-lg);box-shadow:0 20px 70px rgba(0,0,0,.65);display:flex;flex-direction:column;overflow:hidden}
+.detail-head{display:flex;align-items:flex-start;gap:14px;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.detail-kicker{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+.detail-title{font-size:18px;font-weight:600;color:var(--text-primary);line-height:1.35}
+.detail-close{background:var(--bg3);border:1px solid var(--border-hi);color:var(--text-secondary);border-radius:var(--r);width:32px;height:32px;cursor:pointer;font-size:18px;line-height:1;flex-shrink:0}
+.detail-close:hover{color:var(--text-primary);border-color:var(--accent)}
+.detail-body{overflow-y:auto;padding:20px 22px;display:grid;gap:16px}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.detail-grid-summary{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+.detail-metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:11px 12px}
+.detail-label{font-family:var(--font-mono);font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.detail-value{font-family:var(--font-mono);font-size:13px;color:var(--text-primary);word-break:break-word}
+.detail-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px}
+.detail-section-title{font-family:var(--font-mono);font-size:10px;color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
+.detail-list{display:flex;flex-wrap:wrap;gap:6px;min-width:0;max-width:100%}
+.detail-text{font-size:12px;color:var(--text-secondary);line-height:1.7;white-space:pre-wrap;word-break:break-word}
+.detail-code{font-family:var(--font-mono);font-size:11px;background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);padding:12px;max-height:180px;overflow:auto;color:var(--text-secondary);white-space:pre-wrap;word-break:break-word}
+.detail-match{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:10px;color:var(--text-secondary)}
+.detail-match:last-child{border-bottom:none}
+.detail-match-type{color:var(--accent);text-transform:uppercase;letter-spacing:.8px}
+.detail-empty{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);font-style:italic}
+.entity-group-title{font-family:var(--font-mono);font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px}
+.detail-help{cursor:default;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
+
+/* MITRE Heatmap Styles */
+.mitre-col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.mitre-header { font-family: var(--font-mono); font-size: 9px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); padding-bottom: 6px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.mitre-cell { font-size: 10px; padding: 6px 8px; border-radius: 4px; border: 1px solid var(--border); color: var(--text-primary); display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; }
+.mitre-cell span { font-family: var(--font-mono); font-size: 9px; opacity: 0.7; }
+/* Heatmap Colors */
+.heat-0 { background: var(--bg2); border-color: var(--border-hi); }
+.heat-1 { background: rgba(0, 180, 216, 0.15); border-color: rgba(0, 180, 216, 0.3); }
+.heat-2 { background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3); }
+.heat-3 { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4); }
+.heat-4 { background: rgba(239, 68, 68, 0.4); border-color: rgba(239, 68, 68, 0.6); }
+
+/* =========================================================
+   STATUSBAR & MISC
+   ========================================================= */
+.statusbar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:var(--bg1);border-top:1px solid var(--border);font-family:var(--font-mono);font-size:10px;color:var(--text-muted)}
+.status-live{color:var(--green);display:flex;align-items:center;gap:5px}
+.pipeline{display:flex;overflow-x:auto}
+.pipe-step{padding:0 10px;height:44px;display:flex;align-items:center;border-left:1px solid var(--border);font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--text-muted)}
+.pipe-mini{font-family:var(--font-mono);font-size:9px;padding:3px 7px;border-radius:4px;border:1px solid var(--border);color:var(--text-muted);background:var(--bg3)}
+.pipe-mini.done{color:var(--green);border-color:rgba(34,197,94,.3);background:var(--green-dim)}
+.pipe-mini.active{color:var(--accent);border-color:rgba(0,180,216,.4);background:var(--accent-dim)}
+.pipe-step.done{color:var(--green)}
+.pipe-step.active{color:var(--accent);font-weight:600}
+.loading-state{padding:48px;text-align:center;color:var(--text-muted);font-family:var(--font-mono);font-size:12px;animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.error-state{color:var(--red);padding:16px;font-family:var(--font-mono);font-size:11px;background:var(--red-dim);border:1px solid rgba(239,68,68,.25);border-radius:var(--r);margin:16px}
+.hidden{display:none!important}
+
+/* Floating chat bubble */
+#chat-fab{position:fixed;bottom:28px;right:28px;z-index:1000;width:52px;height:52px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,180,216,.4);transition:transform .2s,box-shadow .2s;}
+#chat-fab:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(0,180,216,.55);}
+#chat-fab svg{width:24px;height:24px;fill:#fff;}
+#chat-fab-badge{position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--green);border:2px solid var(--bg0);display:none;}
+
+/* Floating chat window */
+#chat-window{position:fixed;bottom:92px;right:28px;z-index:999;width:380px;height:520px;background:var(--bg1);border:1px solid var(--border);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.5);transform:translateY(20px) scale(.97);opacity:0;pointer-events:none;transition:transform .2s ease,opacity .2s ease;}
+#chat-window.open{transform:translateY(0) scale(1);opacity:1;pointer-events:all;}
+#chat-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);flex-shrink:0;}
+#chat-close{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1;padding:2px 6px;border-radius:4px;}
+#chat-close:hover{color:var(--text-primary);background:var(--bg3);}
+#chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;}
+#chat-footer{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;flex-shrink:0;}
+
+/* Messages */
+.chat-msg{display:flex;flex-direction:column;max-width:85%;}
+.chat-msg--user{align-self:flex-end;align-items:flex-end;}
+.chat-msg--assistant{align-self:flex-start;align-items:flex-start;}
+.chat-bubble{padding:10px 14px;border-radius:12px;font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word;}
+.chat-msg--user .chat-bubble{background:var(--accent);color:#fff;border-bottom-right-radius:3px;}
+.chat-msg--assistant .chat-bubble{background:var(--bg2);color:var(--text-primary);border:1px solid var(--border);border-bottom-left-radius:3px;}
+.chat-sources{margin-top:6px;display:flex;flex-direction:column;gap:3px;}
+.chat-source-tag{font-family:var(--font-mono);font-size:9px;padding:2px 7px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text-muted);cursor:default;}
+.chat-thinking{display:flex;gap:5px;align-items:center;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;}
+.chat-thinking span{width:6px;height:6px;border-radius:50%;background:var(--text-muted);animation:chat-blink 1.2s infinite;}
+.chat-thinking span:nth-child(2){animation-delay:.2s;}
+.chat-thinking span:nth-child(3){animation-delay:.4s;}
+@keyframes chat-blink{0%,80%,100%{opacity:.2;}40%{opacity:1;}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar">
+    <div class="topbar-logo">
+      <div class="logo-chip">CCTI</div>
+      <div class="logo-name">Curated Threat Intelligence <span>Adelaide University</span></div>
+    </div>
+    <div class="topbar-divider"></div>
+    <div class="topbar-meta">supervisor: mamello.thinyane@adelaide.edu.au</div>
+    <div class="topbar-spacer"></div>
+    <div id="source-line" style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted)">Loading…</div>
+    <button class="btn" id="refresh-btn">↺ Reload cache</button>
+    <button class="btn" id="run-pipeline-btn" style="background:var(--accent-dim);border-color:rgba(0,180,216,.4);color:var(--accent);">▶ Run Pipeline</button>
+    <div class="topbar-status"><div class="pulse"></div><span id="status-text">Connecting…</span></div>
+  </header>
+
+  <!-- Threat Detail Modal -->
+  <div id="threat-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:2000;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:var(--bg2);border:1px solid var(--border-hi);border-radius:var(--r-lg);padding:0;max-width:1180px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.6);">
+      <div style="padding:18px 24px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px;flex-shrink:0;">
+        <div style="flex:1;">
+          <div id="tdm-badges" style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;"></div>
+          <div id="tdm-title" style="font-size:16px;font-weight:700;color:var(--text-primary);line-height:1.4;"></div>
+          <div id="tdm-event-id" style="font-size:10px;font-family:var(--font-mono);color:var(--text-muted);margin-top:4px;"></div>
+        </div>
+        <button onclick="closeThreatModal()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text-secondary);border-radius:var(--r);padding:6px 10px;cursor:pointer;font-size:16px;flex-shrink:0;line-height:1;">✕</button>
+      </div>
+      <div style="display:flex;flex:1;overflow:hidden;min-height:0;">
+        <div style="width:340px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:12px;">
+          <div id="tdm-score-section"></div>
+          <div id="tdm-entities-section"></div>
+          <div id="tdm-mitre-section"></div>
+          <div id="tdm-raw-section"></div>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:14px;">
+          <div style="font-size:10px;font-family:var(--font-mono);color:var(--accent);letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse-dot 1.5s infinite;"></span>
+            SOC AI Analyst — Threat Assessment
+          </div>
+          <div id="tdm-summary-section"></div>
+          <div id="tdm-analysis-section" style="flex:1;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pipeline confirmation modal -->
+  <div id="pipeline-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;display:none;">
+    <div style="background:var(--bg2);border:1px solid var(--border-hi);border-radius:var(--r-lg);padding:28px 32px;max-width:420px;width:90%;">
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Run Pipeline</div>
+      <p style="color:var(--text-primary);font-size:14px;margin-bottom:8px;">This will fetch live data from MISP and run all 9 pipeline steps.</p>
+      <p style="color:var(--text-secondary);font-size:12px;margin-bottom:20px;">⏱ Estimated time: <strong style="color:var(--amber)">~5-10 minutes</strong>. You can continue browsing while it runs.</p>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="closePipelineModal()" style="font-family:var(--font-ui);font-size:12px;padding:8px 18px;background:var(--bg3);border:1px solid var(--border-hi);color:var(--text-secondary);border-radius:var(--r);cursor:pointer;">Cancel</button>
+        <button onclick="confirmRunPipeline()" style="font-family:var(--font-ui);font-size:12px;padding:8px 18px;background:var(--accent);border:1px solid var(--accent);color:#fff;border-radius:var(--r);cursor:pointer;font-weight:600;">Run Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating pipeline progress panel -->
+  <div id="pipeline-panel" style="display:none;position:fixed;bottom:60px;right:20px;width:320px;background:var(--bg2);border:1px solid var(--border-hi);border-radius:var(--r-lg);z-index:999;box-shadow:0 8px 32px rgba(0,0,0,.4);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;" onclick="togglePipelinePanel()">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div id="pipeline-panel-pulse" class="pulse"></div>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--accent);letter-spacing:1px;">PIPELINE RUNNING</span>
+      </div>
+      <span id="pipeline-panel-toggle" style="color:var(--text-muted);font-size:12px;">▼</span>
+    </div>
+    <div id="pipeline-panel-body" style="padding:12px 14px;">
+      <div id="pipeline-elapsed" style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-bottom:10px;">Elapsed: 0s</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;" id="pipeline-panel-steps">
+        <span class="pipe-mini" id="pmini-fetch">① Fetch</span>
+        <span class="pipe-mini" id="pmini-filter">② Filter</span>
+        <span class="pipe-mini" id="pmini-format">③ Format</span>
+        <span class="pipe-mini" id="pmini-ner">④ NER</span>
+        <span class="pipe-mini" id="pmini-normalise">⑤ Normalise</span>
+        <span class="pipe-mini" id="pmini-stix">⑥ STIX</span>
+        <span class="pipe-mini" id="pmini-recommend">⑦ Recommend</span>
+        <span class="pipe-mini" id="pmini-evaluate">⑧ Evaluate</span>
+        <span class="pipe-mini" id="pmini-ingest">⑨ Vector DB</span>
+      </div>
+      <div id="pipeline-done-msg" style="display:none;margin-top:10px;font-family:var(--font-mono);font-size:10px;color:var(--green);">✓ Complete — refreshing data...</div>
+    </div>
+  </div>
+
+  <div class="body-grid">
+    <aside class="sidebar">
+
+      <div id="global-sidebar">
+        <div class="panel">
+          <div class="panel-head">Global Overview</div>
+          <div class="panel-body" style="padding:8px 14px">
+            <div class="stat-row"><span class="stat-label">NER Records</span><span class="stat-val" id="stat-total">–</span></div>
+            <div class="stat-row"><span class="stat-label"><div class="sev-dot dot-critical"></div>Critical</span><span class="stat-val" id="sev-critical" style="color:var(--red)">–</span></div>
+            <div class="stat-row"><span class="stat-label"><div class="sev-dot dot-high"></div>High</span><span class="stat-val" id="sev-high" style="color:var(--amber)">–</span></div>
+            <div class="stat-row"><span class="stat-label"><div class="sev-dot dot-medium"></div>Medium</span><span class="stat-val" id="sev-medium" style="color:#eab308">–</span></div>
+            <div class="stat-row"><span class="stat-label"><div class="sev-dot dot-low"></div>Low</span><span class="stat-val" id="sev-low" style="color:var(--green)">–</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">By Category</div>
+          <div class="panel-body" style="padding:8px 14px">
+            <ul id="by-category" style="list-style:none;display:flex;flex-direction:column;gap:0"></ul>
+          </div>
+        </div>
+
+        <div class="panel" id="ner-filters-panel">
+          <div class="panel-head">Filters — NER & IOCs</div>
+          <div class="panel-body" style="display:flex;flex-direction:column;gap:8px">
+            
+            <details open>
+              <summary>Threat actors</summary>
+              <ul class="ent-list" id="ent-threat-actors"></ul>
+            </details>
+            <details>
+              <summary>Malware</summary>
+              <ul class="ent-list" id="ent-malware"></ul>
+            </details>
+            <details>
+              <summary>Tools</summary>
+              <ul class="ent-list" id="ent-tools"></ul>
+            </details>
+            <details>
+              <summary>Technologies</summary>
+              <ul class="ent-list" id="ent-technologies"></ul>
+            </details>
+            <details>
+              <summary>Industries</summary>
+              <ul class="ent-list" id="ent-industries"></ul>
+            </details>
+            <details>
+              <summary>Attack Techniques</summary>
+              <ul class="ent-list" id="ent-attack-techniques"></ul>
+            </details>
+            <details>
+              <summary>MITRE Techniques</summary>
+              <ul class="ent-list" id="ent-mitre"></ul>
+            </details>
+            <details>
+              <summary>Vulnerabilities</summary>
+              <ul class="ent-list" id="ent-vulnerabilities"></ul>
+            </details>
+            
+            <details>
+              <summary>Indicators of Compromise</summary>
+              <div style="padding-left:10px; margin-top:4px;">
+                <div class="sub-cat-label">Domains</div>
+                <ul class="ent-list" style="padding-left:0;" id="ent-domains"></ul>
+                
+                <div class="sub-cat-label">IP Addresses</div>
+                <ul class="ent-list" style="padding-left:0;" id="ent-ips"></ul>
+                
+                <div class="sub-cat-label">URLs</div>
+                <ul class="ent-list" style="padding-left:0;" id="ent-urls"></ul>
+                
+                <div class="sub-cat-label">File Hashes</div>
+                <input type="text" id="hash-search" class="mini-search" placeholder="Filter hashes locally..." autocomplete="off">
+                <ul class="ent-list" style="padding-left:0;" id="ent-hashes"></ul>
+              </div>
+            </details>
+
+          </div>
+        </div>
+      </div>
+
+      <div id="org-sidebar" class="hidden">
+        <div class="panel">
+          <div class="panel-head">Organisation Profile</div>
+          <div class="panel-body">
+            <div class="org-name-large" id="sidebar-org-name">Org Name</div>
+            <div class="org-ind" id="sidebar-org-industry">Industry</div>
+            <div class="org-row"><span class="org-key">Org ID</span><span class="org-val" id="sidebar-org-id"></span></div>
+            <div class="org-row"><span class="org-key">Risk Profile</span><span class="org-val" id="sidebar-org-risk"></span></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">Technology Assets</div>
+          <div class="panel-body" id="sidebar-org-assets" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">MITRE Threat Landscape</div>
+          <div class="panel-body" id="sidebar-org-mitre" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+        </div>
+      </div>
+
+    </aside>
+
+    <div class="main">
+      <div class="toolbar">
+        <div class="field-wrap">
+          <label class="field-label">View Mode</label>
+          <select class="org-select" id="filter-org">
+            <option value="">⬡ Global View — Raw Intelligence Feed</option>
+            <option value="analytics">⬡ Global Analytics Dashboard</option>
+          </select>
+        </div>
+        <div id="generic-filters" style="display:flex;gap:10px;align-items:flex-end">
+          <div class="field-wrap">
+            <label class="field-label">Search</label>
+            <input type="text" id="q" placeholder="Value, comment…"/>
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Severity</label>
+            <select id="filter-severity">
+              <option value="">All</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+            </select>
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Category</label>
+            <select id="filter-category">
+              <option value="">All categories</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="active-filters-container" class="active-filters hidden"></div>
+
+      <div class="content-scroll">
+
+        <div id="analytics-dashboard" class="analytics-container hidden">
+          <div class="donut-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+            <div class="chart-card" style="background: var(--bg2); border: 1px solid var(--border); padding: 16px; border-radius: 6px;">
+              <h4 style="color: var(--text-secondary); margin-bottom: 12px; font-family: 'Space Grotesk'; font-size: 14px;">Threat Actors</h4>
+              <div style="position: relative; height: 180px;"><canvas id="chart-actors"></canvas></div>
+            </div>
+            <div class="chart-card" style="background: var(--bg2); border: 1px solid var(--border); padding: 16px; border-radius: 6px;">
+              <h4 style="color: var(--text-secondary); margin-bottom: 12px; font-family: 'Space Grotesk'; font-size: 14px;">Malware Families</h4>
+              <div style="position: relative; height: 180px;"><canvas id="chart-malware"></canvas></div>
+            </div>
+            <div class="chart-card" style="background: var(--bg2); border: 1px solid var(--border); padding: 16px; border-radius: 6px;">
+              <h4 style="color: var(--text-secondary); margin-bottom: 12px; font-family: 'Space Grotesk'; font-size: 14px;">Target Industries</h4>
+              <div style="position: relative; height: 180px;"><canvas id="chart-industries"></canvas></div>
+            </div>
+            <div class="chart-card" style="background: var(--bg2); border: 1px solid var(--border); padding: 16px; border-radius: 6px;">
+              <h4 style="color: var(--text-secondary); margin-bottom: 12px; font-family: 'Space Grotesk'; font-size: 14px;">Affected Technologies</h4>
+              <div style="position: relative; height: 180px;"><canvas id="chart-tech"></canvas></div>
+            </div>
+          </div>
+        
+          <div class="correlation-card" style="background: var(--bg2); border: 1px solid var(--border); padding: 20px; border-radius: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+              <div>
+                <h4 id="stacked-chart-title" style="color: var(--text-primary); font-family: 'Space Grotesk';">Correlation: Malware by Industry</h4>
+                <span id="stacked-chart-subtitle" style="color: var(--text-secondary); font-size: 12px; font-family: 'IBM Plex Mono';">Malware Volume Distribution by Sector</span>
+              </div>
+              <select id="correlation-view-select" style="background: var(--bg3); border: 1px solid var(--border-hi); color: var(--text-primary); font-family: var(--font-mono); font-size: 11px; padding: 4px 8px; border-radius: 4px; outline: none; cursor: pointer;">
+                <option value="malware_industry">Malware by Industry</option>
+                <option value="actor_tech">Threat Actor by Technology</option>
+                <option value="vuln_tech">Vulnerabilities by Technology</option>
+                <option value="tech_actor">Attack Techniques by Threat Actor</option>
+                <option value="malware_actor">Malware by Threat Actor</option>
+              </select>
+            </div>
+            <div style="position: relative; height: 320px;">
+              <canvas id="chart-stacked-correlation"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card" style="background: var(--bg2); border: 1px solid var(--border); padding: 20px; border-radius: 6px;">
+            <div style="margin-bottom: 16px;">
+              <h4 style="color: var(--text-primary); font-family: 'Space Grotesk'; margin-bottom: 4px;">Attack Vector Flow Analysis</h4>
+              <span style="color: var(--text-secondary); font-size: 12px; font-family: 'IBM Plex Mono';">Tracing the volume paths: Threat Actor → Malware Payload → Target Industry</span>
+            </div>
+            <div id="global-sankey" style="width: 100%; height: 400px; border-radius: var(--r); overflow: hidden;"></div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="chart-card" style="background: var(--bg2); border: 1px solid var(--border); padding: 20px; border-radius: 6px;">
+              <div style="margin-bottom: 16px;">
+                <h4 style="color: var(--text-primary); font-family: 'Space Grotesk'; margin-bottom: 4px;">Campaign Hierarchy</h4>
+                <span style="color: var(--text-secondary); font-size: 12px; font-family: 'IBM Plex Mono';">Actor → Tooling → Targets</span>
+              </div>
+              <div id="global-sunburst" style="width: 100%; height: 350px; border-radius: var(--r); overflow: hidden;"></div>
+            </div>
+
+            <div class="chart-card" style="background: var(--bg2); border: 1px solid var(--border); padding: 20px; border-radius: 6px;">
+                <div style="margin-bottom: 16px;">
+                <h4 style="color: var(--text-primary); font-family: 'Space Grotesk'; margin-bottom: 4px;">Adversary TTP Radar</h4>
+                <span style="color: var(--text-secondary); font-size: 12px; font-family: 'IBM Plex Mono';">Tactical overlay of Top 3 Actors globally</span>
+                </div>
+                <div style="position: relative; height: 350px;"><canvas id="global-chart-radar"></canvas></div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+            
+            <div class="chart-card" style="background: var(--bg2); border: 1px solid var(--border); padding: 20px; border-radius: 6px; grid-column: span 2;">
+                <div style="margin-bottom: 16px;">
+                <h4 style="color: var(--text-primary); font-family: 'Space Grotesk'; margin-bottom: 4px;">Vulnerability (CVE) Landscape</h4>
+                <span style="color: var(--text-secondary); font-size: 12px; font-family: 'IBM Plex Mono';">Actively exploited vulnerabilities scaled by frequency</span>
+                </div>
+                <div id="global-cve-bubble" style="width: 100%; height: 300px; border-radius: var(--r); overflow: hidden;"></div>
+            </div>
+
+            <div class="chart-card" style="background: var(--bg2); border: 1px solid var(--border); padding: 20px; border-radius: 6px; grid-column: span 3;">
+              <div style="margin-bottom: 16px;">
+                <h4 style="color: var(--text-primary); font-family: 'Space Grotesk'; margin-bottom: 4px;">Global MITRE ATT&CK Matrix</h4>
+                <span style="color: var(--text-secondary); font-size: 12px; font-family: 'IBM Plex Mono';">Macro-level threat kill chain coverage heat-map</span>
+              </div>
+              <div id="global-mitre-matrix" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px;"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="recommendations-panel" class="hidden">
+          <div class="rec-header">
+            <div class="rec-title" id="rec-title">Curated Threats</div>
+            <div class="overlap-pill" id="overlap-pill">Recommendations: –</div>
+          </div>
+
+          <div id="org-analytics-grid-row-1" style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+            <div class="chart-card" style="background: var(--bg1); border: 1px solid var(--border); padding: 16px; border-radius: var(--r-lg);">
+              <h4 style="color: var(--text-primary); margin-bottom: 4px; font-family: 'Space Grotesk'; font-size: 14px;">Recommendation Scoring Breakdown</h4>
+              <div style="color: var(--text-secondary); font-size: 11px; margin-bottom: 12px; font-family: var(--font-mono);">Engine score weights for Top 10 Threats</div>
+              <div style="position: relative; height: 220px;"><canvas id="org-chart-scoring"></canvas></div>
+            </div>
+            <div class="chart-card" style="background: var(--bg1); border: 1px solid var(--border); padding: 16px; border-radius: var(--r-lg);">
+              <h4 style="color: var(--text-primary); margin-bottom: 4px; font-family: 'Space Grotesk'; font-size: 14px;">Targeted Vectors</h4>
+              <div style="color: var(--text-secondary); font-size: 11px; margin-bottom: 12px; font-family: var(--font-mono);">Freq in Top 20</div>
+              <div style="position: relative; height: 220px;"><canvas id="org-chart-techniques"></canvas></div>
+            </div>
+            <div class="chart-card" style="background: var(--bg1); border: 1px solid var(--border); padding: 16px; border-radius: var(--r-lg);">
+              <h4 style="color: var(--text-primary); margin-bottom: 4px; font-family: 'Space Grotesk'; font-size: 14px;">MITRE Matches</h4>
+              <div style="color: var(--text-secondary); font-size: 11px; margin-bottom: 12px; font-family: var(--font-mono);">Direct CTI overlap</div>
+              <div style="position: relative; height: 220px;"><canvas id="org-chart-mitre"></canvas></div>
+            </div>
+          </div>
+
+          <div id="org-analytics-grid-row-2" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+            <div class="chart-card" style="background: var(--bg1); border: 1px solid var(--border); padding: 16px; border-radius: var(--r-lg);">
+              <h4 style="color: var(--text-primary); margin-bottom: 4px; font-family: 'Space Grotesk'; font-size: 14px;">Adversary Attribution</h4>
+              <div style="color: var(--text-secondary); font-size: 11px; margin-bottom: 12px; font-family: var(--font-mono);">Actors driving top threats</div>
+              <div style="position: relative; height: 220px;"><canvas id="org-chart-actors"></canvas></div>
+            </div>
+            <div class="chart-card" style="background: var(--bg1); border: 1px solid var(--border); padding: 16px; border-radius: var(--r-lg);">
+              <h4 style="color: var(--text-primary); margin-bottom: 4px; font-family: 'Space Grotesk'; font-size: 14px;">Targeted Assets</h4>
+              <div style="color: var(--text-secondary); font-size: 11px; margin-bottom: 12px; font-family: var(--font-mono);">Vulnerable stack tech</div>
+              <div style="position: relative; height: 180px;"><canvas id="org-chart-assets"></canvas></div>
+            </div>
+            <div class="chart-card" style="background: var(--bg1); border: 1px solid var(--border); padding: 16px; border-radius: var(--r-lg);">
+              <h4 style="color: var(--text-primary); margin-bottom: 4px; font-family: 'Space Grotesk'; font-size: 14px;">Severity Profile</h4>
+              <div style="color: var(--text-secondary); font-size: 11px; margin-bottom: 12px; font-family: var(--font-mono);">Risk distribution of Top 20</div>
+              <div style="position: relative; height: 180px;"><canvas id="org-chart-severity"></canvas></div>
+            </div>
+          </div>
+
+          <div id="org-analytics-grid-row-3" style="display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 24px;">
+            <div class="chart-card" style="background: var(--bg1); border: 1px solid var(--border); padding: 16px; border-radius: var(--r-lg);">
+              <h4 style="color: var(--text-primary); margin-bottom: 4px; font-family: 'Space Grotesk'; font-size: 14px;">Actor Tactics Hierarchy</h4>
+              <div style="color: var(--text-secondary); font-size: 11px; margin-bottom: 12px; font-family: var(--font-mono);">Interactive Sunburst: Adversary → Observed techniques</div>
+              <div id="org-sunburst" style="width: 100%; height: 300px; overflow: hidden; border-radius: var(--r);"></div>
+            </div>
+
+            <div class="chart-card" style="background: var(--bg1); border: 1px solid var(--border); padding: 16px; border-radius: var(--r-lg);">
+              <h4 style="color: var(--text-primary); margin-bottom: 4px; font-family: 'Space Grotesk'; font-size: 14px;">MITRE ATT&CK Matrix</h4>
+              <div style="color: var(--text-secondary); font-size: 11px; margin-bottom: 12px; font-family: var(--font-mono);">Threat kill chain coverage heat-map</div>
+              <div id="org-mitre-matrix" style="display: flex; gap: 8px; overflow-x: auto; height: 300px; padding-bottom: 10px;"></div>
+            </div>
+          </div>
+
+          <div class="rec-grid" id="recommendation-container">
+            <div class="loading-state">Calculating relevance metrics…</div>
+          </div>
+        </div>
+
+        <!-- chat moved to floating bubble -->
+
+        <div id="pivot-graph-wrapper" style="display: none; flex-direction: column; gap: 14px; margin-bottom: 20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg1); padding:12px 20px; border:1px solid var(--border); border-radius:var(--r-lg);">
+            <div>
+              <div style="font-weight:600; font-size:16px; color:var(--text-primary);">Interactive Pivot Investigation</div>
+              <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">Click a node to map its direct attack chain connections. Click again to collapse.</div>
+            </div>
+            <button class="btn" onclick="closePivotGraph()" style="background:var(--red-dim); color:var(--red); border-color:rgba(239,68,68,0.3);">✕ Close Investigation</button>
+          </div>
+          <div id="pivot-graph-container" style="width: 100%; height: 70vh; border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; background: #080f1d;"></div>
+        </div>
+
+        <div id="threats-table-container">
+          <div class="threats-wrap">
+            <table class="threats-table">
+              <thead>
+                <tr>
+                  <th>Severity</th>
+                  <th>Category</th>
+                  <th>Type</th>
+                  <th>Indicator</th>
+                  <th>Event Info</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="threats-tbody">
+                <tr><td colspan="6" class="loading-state">Loading intelligence feed…</td></tr>
+              </tbody>
+            </table>
+            <div class="pagination">
+              <button class="page-btn" id="prev-btn">‹ Prev</button>
+              <span class="page-label" id="page-label">Page 1</span>
+              <button class="page-btn" id="next-btn">Next ›</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <div class="status-live"><div class="pulse"></div><span id="live-label">Connecting to API…</span></div>
+    <div class="pipeline">
+      <div class="pipe-step queued" id="pipe-fetch">① Fetch</div>
+      <div class="pipe-step queued" id="pipe-filter">② Filter</div>
+      <div class="pipe-step queued" id="pipe-format">③ Format</div>
+      <div class="pipe-step queued" id="pipe-ner">④ NER</div>
+      <div class="pipe-step queued" id="pipe-normalise">⑤ Normalise</div>
+      <div class="pipe-step queued" id="pipe-stix">⑥ STIX</div>
+      <div class="pipe-step queued" id="pipe-recommend">⑦ Recommend</div>
+      <div class="pipe-step queued" id="pipe-evaluate">⑧ Evaluate</div>
+      <div class="pipe-step queued" id="pipe-ingest">⑨ Vector DB</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEFAULT_CONFIG = Object.freeze({ apiBase:"/api/v1", pageSize:50, categoriesShown:12, entitiesShown:50 });
+let CONFIG = { ...DEFAULT_CONFIG };
+function API(){ return CONFIG.apiBase; }
+
+// Core State
+let state = { page:1, pageSize:DEFAULT_CONFIG.pageSize, q:"", severity:"", category:"", type:"", entities:[] };
+let CURRENT_RECS = []; // populated each time loadRecommendations renders cards
+let ALL_ENTITIES = {}; 
+let DYNAMIC_PROFILES = {}; 
+let isCategoryDropdownPopulated = false;
+let CURRENT_RECOMMENDATIONS = [];
+let CURRENT_ORG_ID = "";
+let CURRENT_ORG_INDUSTRY = "";
+
+// Chart state
+let chartInstances = {};
+let orgChartInstances = {}; 
+
+const themeColors = ['#00b4d8', '#3a86ff', '#8338ec', '#ff006e', '#fb5607', '#ffbe0b', '#22c55e', '#f59e0b', '#ef4444'];
+const textPrimaryColor = '#dce8f8';
+const borderMutedColor = '#1c2d4a';
+
+function el(id){ return document.getElementById(id); }
+function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function listChips(values, cls="ent-tech", limit=24) {
+  const arr = Array.isArray(values) ? values.filter(Boolean) : [];
+  if (!arr.length) return `<div class="detail-empty">None detected</div>`;
+  return `<div class="detail-list">${arr.slice(0, limit).map(v=>`<span class="ent-chip ${cls}">${esc(v)}</span>`).join("")}</div>`;
+}
+
+const DETAIL_GLOSSARY = {
+  "Score": "Final recommendation score after similarity, asset, MITRE, and severity weighting.",
+  "Severity": "Rule-based risk level derived from extracted CTI entities and severity multiplier.",
+  "Sector": "Industry sector of the selected organisation profile.",
+  "Event ID": "Source event identifier used to group related CTI attributes.",
+  "Category": "Original CTI/MISP category for the selected record.",
+  "Type": "Original CTI/MISP attribute type, such as vulnerability, text, or snort.",
+  "Score Breakdown": "Components that contributed to the final recommendation score.",
+  "Cosine similarity": "Text similarity between the organisation profile and the CTI record.",
+  "CPE asset boost": "Extra score when CTI entities match technologies in the organisation profile.",
+  "MITRE bonus": "Extra score when CTI techniques or actors match the organisation threat landscape.",
+  "Severity multiplier": "Multiplier applied to raise higher-severity records in the ranking.",
+  "Extracted CTI Summary": "Short summary generated from the entities extracted during NER.",
+  "MITRE Matches": "Profile threat landscape items that matched entities found in this CTI record.",
+  "Extracted Entities": "Cybersecurity entities detected by regex, dictionaries, spaCy, and optional SecBERT.",
+  "Threat Actors": "Adversary groups or campaigns identified in the CTI record.",
+  "Malware / Tools": "Malware families or attacker tools identified in the CTI record.",
+  "Technologies": "Products, platforms, or systems mentioned in the CTI record.",
+  "Techniques / Vulnerabilities": "MITRE ATT&CK techniques and CVE/vulnerability references found in the record.",
+  "IoCs / Indicators": "Observable indicators such as IPs, domains, URLs, emails, filenames, or hashes.",
+  "Source Context": "Original CTI text and metadata kept for analyst review and traceability.",
+  "Raw CTI Text": "Original CTI text used by NER, semantic scoring, and RAG retrieval.",
+  "Relevance Breakdown": "Visual split of semantic similarity, asset boost, and MITRE bonus before the severity multiplier.",
+  "Targeted Sectors": "Industries or sectors detected in the CTI record.",
+  "SOC AI Analyst": "RAG-generated threat assessment tailored to the selected organisation.",
+};
+
+function tipText(label) {
+  return DETAIL_GLOSSARY[label] || "";
+}
+
+function helpLabel(label, cls="detail-label") {
+  const tip = tipText(label);
+  return `<div class="${cls}${tip ? " detail-help" : ""}"${tip ? ` title="${esc(tip)}"` : ""}>${esc(label)}</div>`;
+}
+
+function flattenIocs(iocs = {}) {
+  const hashes = iocs.hashes || {};
+  return [
+    ...(iocs.ips || []),
+    ...(iocs.domains || []),
+    ...(iocs.urls || []),
+    ...(iocs.emails || []),
+    ...(hashes.md5 || []),
+    ...(hashes.sha1 || []),
+    ...(hashes.sha256 || [])
+  ];
+}
+
+function metricBox(label, value) {
+  return `<div class="detail-metric">${helpLabel(label)}<div class="detail-value">${esc(value)}</div></div>`;
+}
+
+function renderMitreMatches(matches = []) {
+  if (!Array.isArray(matches) || !matches.length) return `<div class="detail-empty">No direct MITRE match for this recommendation.</div>`;
+  const seen = new Set();
+  return matches.slice(0, 12).map(m => {
+    const type = m.match_type || m.type || "match";
+    const value = m.cti_technique || m.technique || m.org_technique || m.profile_technique || m.profile || "-";
+    const key = `${type}:${value}`.toLowerCase();
+    if (seen.has(key)) return "";
+    seen.add(key);
+    return `<div class="detail-match"><span class="detail-match-type">${esc(type)} match:</span><span>${esc(value)}</span></div>`;
+  }).join("") || `<div class="detail-empty">No direct MITRE match for this recommendation.</div>`;
+}
+
+function parseSourceFields(rawText = "") {
+  const result = {};
+  const parts = String(rawText || "").split("|").map(part => part.trim());
+  parts.forEach(part => {
+    const idx = part.indexOf(":");
+    if (idx === -1) return;
+    const key = part.slice(0, idx).trim().toLowerCase();
+    const value = part.slice(idx + 1).trim();
+    if (key === "category") result.category = value;
+    if (key === "type") result.type = value;
+    if (key === "indicator") result.indicator = value;
+  });
+  return result;
+}
+
+function uniqueValues(values = []) {
+  return [...new Set((Array.isArray(values) ? values : []).filter(Boolean))];
+}
+
+function renderSources(sources = []) {
+  if (!Array.isArray(sources) || !sources.length) return "";
+  return `<div style="margin-top:12px">
+    ${helpLabel("CTI Sources", "entity-group-title")}
+    <div class="detail-list">${sources.map(src => `<span class="ent-chip ent-tech">${esc(src.label || "CTI")}</span>`).join("")}</div>
+  </div>`;
+}
+
+function buildThreatAnalysisQuery(rec, orgName, mitreTechniques = []) {
+  const ents = rec.entities || {};
+  const actorList = (ents.threat_actors || []).slice(0, 3).join(", ") || "unknown actors";
+  const malwareList = (ents.malware || []).slice(0, 3).join(", ");
+  const techList = mitreTechniques.slice(0, 4).join(", ");
+  let query = `Threat analysis: "${rec.title || "Untitled Threat"}". `;
+  if (actorList !== "unknown actors") query += `Threat actors: ${actorList}. `;
+  if (malwareList) query += `Malware: ${malwareList}. `;
+  if (techList) query += `MITRE techniques: ${techList}. `;
+  query += `For ${orgName}: 1) How this attack works and what the threat actors do step by step. 2) Which specific assets at ${orgName} are most at risk and why. 3) Concrete defensive actions the security team should take immediately to reduce exposure.`;
+  return query;
+}
+
+function loadDetailThreatAnalysis(rec, orgName, mitreTechniques = []) {
+  const body = el("detail-analysis-body");
+  const sources = el("detail-analysis-sources");
+  if (!body) return;
+  body.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:var(--text-muted);font-size:12px;padding:10px 0;">
+    <span style="display:inline-block;width:14px;height:14px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0;"></span>
+    Querying threat intelligence database...
+  </div>`;
+  if (sources) sources.innerHTML = "";
+
+  fetch(API() + "/threats/query", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({query: buildThreatAnalysisQuery(rec, orgName, mitreTechniques)})
+  })
+  .then(r => r.json())
+  .then(data => {
+    const target = el("detail-analysis-body");
+    if (!target) return;
+    const answer = esc(data.answer || "No analysis available.")
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .split("\n\n").join('</p><p style="margin:0 0 12px;">')
+      .split("\n").join("<br>");
+    target.innerHTML = `<p style="margin:0 0 12px;">${answer}</p>`;
+    const sourceTarget = el("detail-analysis-sources");
+    if (sourceTarget) sourceTarget.innerHTML = renderSources(data.sources || []);
+  })
+  .catch(err => {
+    const target = el("detail-analysis-body");
+    if (target) target.innerHTML = `<div style="color:var(--text-muted);font-size:12px;">Analysis unavailable — RAG engine may be offline.<br><small>${esc(err.message)}</small></div>`;
+  });
+}
+
+window.openRecommendationDetail = function(index) {
+  const rec = CURRENT_RECOMMENDATIONS[index];
+  if (!rec) return;
+
+  const entities = rec.entities || {};
+  const iocs = flattenIocs(entities.iocs);
+  const org = el("filter-org")?.selectedOptions?.[0]?.text || DYNAMIC_PROFILES[CURRENT_ORG_ID]?.name || CURRENT_ORG_ID || "Selected organisation";
+  const score = Number(rec.score || 0).toFixed(1);
+  const sourceText = rec.description || rec.raw_text || rec.embedding_text || "";
+  const parsedSource = parseSourceFields(rec.raw_text || rec.embedding_text || "");
+  const category = rec.category || parsedSource.category || "-";
+  const attrType = rec.type || parsedSource.type || "-";
+  const mitreTechniques = uniqueValues([...(entities.attack_techniques || []), ...(entities.mitre_techniques || [])]);
+  const sectors = uniqueValues([...(entities.industries || []), ...(entities.sectors || [])]);
+  const totalRaw = Number(rec.cosine_sim || 0) + Number(rec.cpe_boost || 0) + Number(rec.mitre_bonus || 0);
+  const cPct = totalRaw > 0 ? (Number(rec.cosine_sim || 0) / totalRaw) * 100 : 33;
+  const pPct = totalRaw > 0 ? (Number(rec.cpe_boost || 0) / totalRaw) * 100 : 33;
+  const mPct = totalRaw > 0 ? (Number(rec.mitre_bonus || 0) / totalRaw) * 100 : 34;
+  const matchedOrgTtps = uniqueValues((rec.mitre_matches || []).map(m => m.org_technique || m.profile_technique || m.profile));
+  const s = (rec.severity || "low").toLowerCase();
+  const sevColor = {critical:"var(--red)",high:"var(--amber)",medium:"#f59e0b",low:"#22c55e"}[s] || "#6b87ad";
+
+  el("tdm-badges").innerHTML = sevBadge(rec.severity)
+    + `<span style="font-family:var(--font-mono);font-size:10px;background:var(--bg3);border:1px solid var(--border);padding:3px 8px;border-radius:12px;color:var(--text-muted);">Score: <strong style="color:${sevColor}">${score} pts</strong></span>`
+    + (rec.rank ? `<span style="font-family:var(--font-mono);font-size:10px;background:var(--bg3);border:1px solid var(--border);padding:3px 8px;border-radius:12px;color:var(--accent);">Rank #${rec.rank}</span>` : "");
+  el("tdm-title").textContent = rec.title || "Untitled Threat";
+  el("tdm-event-id").textContent = `${org} · Event ID: ${rec.event_id || "unknown"}`;
+
+  el("tdm-score-section").innerHTML = `
+    <div class="detail-section">
+      ${helpLabel("Relevance Breakdown", "detail-section-title")}
+      <div class="score-bar-bg" style="height:6px;margin-bottom:10px">
+        <div class="bar-cosine" style="width:${cPct.toFixed(1)}%"></div>
+        <div class="bar-cpe" style="width:${pPct.toFixed(1)}%"></div>
+        <div class="bar-mitre" style="width:${mPct.toFixed(1)}%"></div>
+      </div>
+      <div style="font-size:10px;color:var(--text-muted);display:flex;flex-direction:column;gap:3px;font-family:var(--font-mono);">
+        <span style="color:#3a86ff;">&#9632; Semantic: ${Number(rec.cosine_sim || 0).toFixed(4)}</span>
+        <span style="color:#22c55e;">&#9632; CPE: +${Number(rec.cpe_boost || 0).toFixed(4)}</span>
+        <span style="color:var(--amber);">&#9632; MITRE: +${Number(rec.mitre_bonus || 0).toFixed(4)} &nbsp;x${rec.severity_multiplier || 1}</span>
+      </div>
+    </div>
+
+    <div class="detail-grid detail-grid-summary">
+      ${metricBox("Score", `${score} pts`)}
+      ${metricBox("Severity", rec.severity || "unknown")}
+      ${metricBox("Sector", CURRENT_ORG_INDUSTRY || "-")}
+      ${metricBox("Event ID", rec.event_id || "-")}
+      ${metricBox("Category", category)}
+      ${metricBox("Type", attrType)}
+    </div>`;
+
+  el("tdm-entities-section").innerHTML = `
+    <div class="detail-section">
+      ${helpLabel("Extracted Entities", "detail-section-title")}
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>${helpLabel("Threat Actors", "entity-group-title")}${listChips(entities.threat_actors, "ent-actor")}</div>
+        <div>${helpLabel("Malware Families", "entity-group-title")}${listChips(entities.malware, "ent-attack")}</div>
+        <div>${helpLabel("Attack Tools", "entity-group-title")}${listChips(entities.tools, "ent-attack")}</div>
+        <div>${helpLabel("Technologies", "entity-group-title")}${listChips(entities.technologies, "ent-tech")}</div>
+        <div>${helpLabel("Vulnerabilities", "entity-group-title")}${listChips(entities.vulnerabilities, "ent-attack")}</div>
+        <div>${helpLabel("Targeted Sectors", "entity-group-title")}${listChips(sectors, "ent-tech")}</div>
+        <div>${helpLabel("IoCs / Indicators", "entity-group-title")}${listChips(iocs, "ent-tech", 18)}</div>
+      </div>
+    </div>`;
+
+  el("tdm-mitre-section").innerHTML = `
+    <div class="detail-section">
+      ${helpLabel("MITRE Matches", "detail-section-title")}
+      <div style="margin-bottom:10px">${helpLabel("MITRE ATT&CK", "entity-group-title")}${listChips(mitreTechniques, "ent-attack", 24)}</div>
+      <div style="margin-bottom:10px">${helpLabel("Org TTPs matched", "entity-group-title")}${listChips(matchedOrgTtps, "ent-tech", 12)}</div>
+      ${renderMitreMatches(rec.mitre_matches || [])}
+    </div>`;
+
+  el("tdm-raw-section").innerHTML = `
+    <div class="detail-section">
+      ${helpLabel("Source Context", "detail-section-title")}
+      ${helpLabel("Raw CTI Text", "entity-group-title")}
+      <div class="detail-code">${esc(sourceText || "No source text available for this recommendation.")}</div>
+    </div>`;
+
+  el("tdm-summary-section").innerHTML = `
+    <div class="detail-section">
+      ${helpLabel("Extracted CTI Summary", "detail-section-title")}
+      <div class="detail-text">${esc(entities.summary || "This recommendation matched the selected organisation profile through semantic similarity, asset context, MITRE overlap, or severity weighting.")}</div>
+    </div>`;
+
+  el("tdm-analysis-section").innerHTML = `
+    <div class="detail-section">
+      ${helpLabel("SOC AI Analyst", "detail-section-title")}
+      <div class="detail-text" style="margin-bottom:10px">Threat Analysis — ${esc(org)}</div>
+      <div id="detail-analysis-body" class="detail-text"></div>
+      <div id="detail-analysis-sources"></div>
+    </div>
+  `;
+  el("threat-detail-modal").style.display = "flex";
+  document.body.style.overflow = "hidden";
+  loadDetailThreatAnalysis(rec, org, mitreTechniques);
+};
+
+window.closeRecommendationDetail = function() {
+  closeThreatModal();
+};
+
+function closeThreatModal() {
+  el("threat-detail-modal").style.display = "none";
+  document.body.style.overflow = "";
+};
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && el("threat-detail-modal")?.style.display === "flex") {
+    closeThreatModal();
+  }
+});
+
+function sevBadge(sev){
+  const s = (sev||'unknown').toLowerCase();
+  return `<span class="sev sev-${s}">${esc(s)}</span>`;
+}
+
+async function getJSON(path){
+  const r = await fetch(path);
+  if(!r.ok) throw new Error(`${path} → HTTP ${r.status}`);
+  return r.json();
+}
+
+async function loadConfig(){
+  try{ const cfg = await getJSON(`${DEFAULT_CONFIG.apiBase}/config`); CONFIG={...DEFAULT_CONFIG,...cfg}; state.pageSize=CONFIG.pageSize; }
+  catch(e){ console.warn("Config fetch failed"); }
+}
+
+/* =========================================================
+   GLOBAL PLOTLY ADVANCED CHARTS
+   ========================================================= */
+function renderGlobalAdvancedCharts(data) {
+    // 1. SANKEY DIAGRAM (Actor -> Malware -> Industry)
+    const tree = data.actor_malware_industry_tree || {};
+    let sNodes = [];
+    let sLinks = { source: [], target: [], value: [] };
+    let nodeIndex = {};
+
+    function getNode(name) {
+        if(nodeIndex[name] === undefined) {
+            nodeIndex[name] = sNodes.length;
+            sNodes.push(name);
+        }
+        return nodeIndex[name];
+    }
+
+    Object.keys(tree).forEach(actor => {
+        let aIdx = getNode(actor);
+        Object.keys(tree[actor]).forEach(mal => {
+            let mIdx = getNode(mal);
+            let a_m_count = 0;
+            
+            Object.keys(tree[actor][mal]).forEach(ind => {
+                let indIdx = getNode(ind);
+                let count = tree[actor][mal][ind];
+                a_m_count += count;
+                sLinks.source.push(mIdx);
+                sLinks.target.push(indIdx);
+                sLinks.value.push(count);
+            });
+            
+            sLinks.source.push(aIdx);
+            sLinks.target.push(mIdx);
+            sLinks.value.push(a_m_count);
+        });
+    });
+
+    let sankeyData = [{
+        type: "sankey",
+        orientation: "h",
+        node: {
+            pad: 15, thickness: 20,
+            line: { color: "#0d1626", width: 0.5 },
+            label: sNodes,
+            color: sNodes.map((_, i) => themeColors[i % themeColors.length])
+        },
+        link: {
+            source: sLinks.source, target: sLinks.target, value: sLinks.value,
+            color: 'rgba(107, 135, 173, 0.2)' 
+        }
+    }];
+
+    Plotly.newPlot('global-sankey', sankeyData, {
+        paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+        margin: {t:20, l:20, r:20, b:20},
+        font: { color: textPrimaryColor, family: 'IBM Plex Mono', size: 11 }
+    }, {displayModeBar: false, responsive: true});
+
+    // 2. GLOBAL SUNBURST (Actor -> Malware -> Industry)
+    let sbIds = ["Global Campaigns"], sbLabels = ["Global Campaigns"], sbParents = [""], sbValues = [0];
+
+    Object.keys(tree).forEach(actor => {
+        sbIds.push(actor); sbLabels.push(actor); sbParents.push("Global Campaigns"); sbValues.push(0);
+        Object.keys(tree[actor]).forEach(mal => {
+            let malId = `${actor}-${mal}`;
+            sbIds.push(malId); sbLabels.push(mal); sbParents.push(actor); sbValues.push(0);
+            Object.keys(tree[actor][mal]).forEach(ind => {
+                let indId = `${actor}-${mal}-${ind}`;
+                let count = tree[actor][mal][ind];
+                sbIds.push(indId); sbLabels.push(ind); sbParents.push(malId); sbValues.push(count);
+            });
+        });
+    });
+
+    Plotly.newPlot('global-sunburst', [{
+        type: "sunburst", ids: sbIds, labels: sbLabels, parents: sbParents, values: sbValues,
+        outsidetextfont: {size: 10, color: "#6b87ad"},
+        insidetextfont: {size: 11, color: "#ffffff", family: "Space Grotesk"},
+        marker: { line: { width: 1, color: '#0d1626' } },
+        textinfo: "label+value", hoverinfo: "label+value+percent parent"
+    }], {
+        paper_bgcolor: 'rgba(0,0,0,0)', margin: {t:0, l:0, r:0, b:0},
+        sunburstcolorway: ["#ef4444", "#f59e0b", "#3a86ff", "#8338ec", "#00b4d8"]
+    }, {displayModeBar: false, responsive: true});
+
+    // 3. GLOBAL CVE BUBBLE MATRIX (Plotly Scatter)
+    const cves = data.donuts.vulnerabilities || {};
+    const cveNames = Object.keys(cves);
+    const cveCounts = Object.values(cves);
+
+    let trace1 = {
+        x: cveNames, y: cveCounts,
+        mode: 'markers', text: cveNames,
+        marker: {
+            size: cveCounts,
+            sizeref: 2, sizemin: 6,
+            color: cveCounts,
+            colorscale: 'YlOrRd',
+            line: {color: '#1c2d4a', width: 1}
+        },
+        hovertemplate: '<b>%{x}</b><br>Hits: %{y}<extra></extra>'
+    };
+
+    Plotly.newPlot('global-cve-bubble', [trace1], {
+        paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+        margin: {t:20, l:40, r:20, b:40},
+        xaxis: { gridcolor: borderMutedColor, tickfont: {color: '#6b87ad', family: 'IBM Plex Mono'} },
+        yaxis: { gridcolor: borderMutedColor, tickfont: {color: '#6b87ad'} },
+        font: { color: textPrimaryColor, family: 'Space Grotesk' }
+    }, {displayModeBar: false, responsive: true});
+
+
+    // 4. GLOBAL MITRE HTML HEATMAP
+    const killChainPhases = {
+        "Initial Access": ["phishing", "spear-phishing", "watering-hole attacks", "social engineering", "drive-by compromise"],
+        "Execution": ["malicious macro", "web app exploits", "powershell", "scripting"],
+        "Credential Access": ["credential theft", "credential dumping", "mimikatz", "carding", "brute force"],
+        "C2 & Exfil": ["c2", "beacon", "exfiltration", "data theft"],
+        "Impact": ["ransomware", "encryption", "data destruction", "defacement", "ddos"]
+    };
+
+    let phaseCounts = { "Initial Access": {}, "Execution": {}, "Credential Access": {}, "C2 & Exfil": {}, "Impact": {} };
+    let maxHeat = 0;
+    
+    // Use the raw attack techniques from the backend
+    const globalTechs = data.donuts.attack_techniques || {};
+
+    Object.entries(globalTechs).forEach(([tech, count]) => {
+        let tLower = tech.toLowerCase();
+        let matchedPhase = null;
+        
+        for (const [phase, matchers] of Object.entries(killChainPhases)) {
+            if (matchers.some(m => tLower.includes(m))) {
+                matchedPhase = phase; break;
+            }
+        }
+        if (!matchedPhase) matchedPhase = "Execution"; // Fallback
+
+        phaseCounts[matchedPhase][tech] = count;
+        if (count > maxHeat) maxHeat = count;
+    });
+
+    const getHeatClass = (val) => {
+        let ratio = val / (maxHeat || 1);
+        if (ratio > 0.7) return 'heat-4';
+        if (ratio > 0.4) return 'heat-3';
+        if (ratio > 0.1) return 'heat-2';
+        return 'heat-1';
+    };
+
+    let heatmapHTML = "";
+    Object.keys(killChainPhases).forEach(phase => {
+        heatmapHTML += `<div class="mitre-col"><div class="mitre-header">${phase}</div>`;
+        let items = Object.entries(phaseCounts[phase]).sort((a,b)=>b[1]-a[1]);
+        
+        if(items.length === 0) {
+            heatmapHTML += `<div class="mitre-cell heat-0" style="color:var(--text-muted); font-style:italic;">No observations</div>`;
+        } else {
+            items.forEach(([tName, tCount]) => {
+                heatmapHTML += `<div class="mitre-cell ${getHeatClass(tCount)}">${esc(tName)} <span>[${tCount}]</span></div>`;
+            });
+        }
+        heatmapHTML += `</div>`;
+    });
+
+    el('global-mitre-matrix').innerHTML = heatmapHTML;
+}
+
+/* =========================================================
+   CHART.JS GLOBAL DASHBOARD (DONUTS, STACKED, RADAR)
+   ========================================================= */
+async function loadAnalyticsDashboard() {
+  try {
+    const res = await fetch(`${API()}/analytics/correlation`);
+    const data = await res.json();
+
+    const makeDonutOptions = () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'right', labels: { color: '#6b87ad', font: { size: 10, family: 'IBM Plex Mono' } } }
+      },
+      cutout: '70%', color: '#dce8f8'
+    });
+
+    const createChart = (id, type, chartData, options) => {
+      if (chartInstances[id]) { chartInstances[id].destroy(); }
+      chartInstances[id] = new Chart(document.getElementById(id).getContext('2d'), { type, data: chartData, options });
+    };
+
+    createChart('chart-actors', 'doughnut', {
+      labels: Object.keys(data.donuts.actors || {}),
+      datasets: [{ data: Object.values(data.donuts.actors || {}), backgroundColor: themeColors, borderWidth: 1, borderColor: '#0d1626' }]
+    }, makeDonutOptions());
+
+    createChart('chart-malware', 'doughnut', {
+      labels: Object.keys(data.donuts.malware || {}),
+      datasets: [{ data: Object.values(data.donuts.malware || {}), backgroundColor: themeColors, borderWidth: 1, borderColor: '#0d1626' }]
+    }, makeDonutOptions());
+
+    createChart('chart-industries', 'doughnut', {
+      labels: Object.keys(data.donuts.industries || {}),
+      datasets: [{ data: Object.values(data.donuts.industries || {}), backgroundColor: themeColors, borderWidth: 1, borderColor: '#0d1626' }]
+    }, makeDonutOptions());
+
+    createChart('chart-tech', 'doughnut', {
+      labels: Object.keys(data.donuts.technologies || {}),
+      datasets: [{ data: Object.values(data.donuts.technologies || {}), backgroundColor: themeColors, borderWidth: 1, borderColor: '#0d1626' }]
+    }, makeDonutOptions());
+
+    // ADVERSARY RADAR CHART (Chart.js)
+    const top3Actors = Object.keys(data.donuts.actors || {}).slice(0, 3);
+    const top6Techs = Object.keys(data.donuts.attack_techniques || {}).slice(0, 6);
+    const matrixActorTech = data.correlation_actor_technique || {};
+    
+    const radarDatasets = top3Actors.map((actor, idx) => {
+        const actorTechs = matrixActorTech[actor] || {};
+        const dataPoints = top6Techs.map(tech => actorTechs[tech] || 0);
+        return {
+            label: actor,
+            data: dataPoints,
+            backgroundColor: themeColors[idx] + '40', // Semi-transparent
+            borderColor: themeColors[idx],
+            borderWidth: 2,
+            pointBackgroundColor: themeColors[idx]
+        };
+    });
+
+    createChart('global-chart-radar', 'radar', {
+        labels: top6Techs,
+        datasets: radarDatasets
+    }, {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+            r: { 
+                angleLines: { color: borderMutedColor }, 
+                grid: { color: borderMutedColor }, 
+                pointLabels: { color: '#6b87ad', font: { family: 'IBM Plex Mono', size: 10 } },
+                ticks: { display: false }
+            }
+        },
+        plugins: { legend: { position: 'bottom', labels: { color: textPrimaryColor, font: { family: 'IBM Plex Mono', size: 11 } } } }
+    });
+
+    const renderStackedChart = (viewType) => {
+      let matrix, title, subtitle;
+
+      if (viewType === 'malware_industry') {
+        matrix = data.correlation_industry_malware || {};
+        title = "Correlation: Malware by Industry"; subtitle = "Malware Volume Distribution by Sector";
+      } else if (viewType === 'actor_tech') {
+        matrix = data.correlation_tech_actor || {};
+        title = "Correlation: Threat Actor by Technology"; subtitle = "Actor Focus across Technology Stack";
+      } else if (viewType === 'vuln_tech') {
+        matrix = data.correlation_tech_vuln || {};
+        title = "Correlation: Vulnerabilities by Technology"; subtitle = "CVE/Exploit Density across Tech Stack";
+      } else if (viewType === 'tech_actor') {
+        matrix = data.correlation_actor_technique || {};
+        title = "Correlation: Attack Techniques by Threat Actor"; subtitle = "TTPs (Tactics, Techniques, Procedures) by Adversary";
+      } else if (viewType === 'malware_actor') {
+        matrix = data.correlation_actor_malware || {};
+        title = "Correlation: Malware by Threat Actor"; subtitle = "Tooling and Payloads utilized by Adversary Groups";
+      }
+
+      const primaryLabels = Object.keys(matrix).filter(k => Object.keys(matrix[k]).length > 0);
+      const secondaryLabelsSet = new Set();
+      primaryLabels.forEach(k => Object.keys(matrix[k]).forEach(subK => secondaryLabelsSet.add(subK)));
+
+      document.getElementById('stacked-chart-title').innerText = title;
+      document.getElementById('stacked-chart-subtitle').innerText = subtitle;
+
+      const stackedDatasets = Array.from(secondaryLabelsSet).map((subName, index) => {
+        return {
+          label: subName,
+          data: primaryLabels.map(pLabel => matrix[pLabel][subName] || 0),
+          backgroundColor: themeColors[index % themeColors.length], barPercentage: 0.5
+        };
+      });
+
+      createChart('chart-stacked-correlation', 'bar', {
+        labels: primaryLabels, datasets: stackedDatasets
+      }, {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          x: { stacked: true, grid: { display: false }, ticks: { color: '#6b87ad', font: { family: 'Space Grotesk' } } },
+          y: { stacked: true, grid: { color: borderMutedColor }, ticks: { color: '#6b87ad', font: { family: 'IBM Plex Mono' } } }
+        },
+        plugins: { legend: { position: 'bottom', labels: { color: textPrimaryColor, font: { family: 'IBM Plex Mono', size: 11 } } } }
+      });
+    };
+
+    renderStackedChart('malware_industry');
+
+    const viewSelect = document.getElementById('correlation-view-select');
+    const newSelect = viewSelect.cloneNode(true);
+    viewSelect.parentNode.replaceChild(newSelect, viewSelect);
+    newSelect.addEventListener('change', (e) => { renderStackedChart(e.target.value); });
+
+    // Fire off advanced global charts (Sankey, Bubble, Sunburst, Heatmap)
+    renderGlobalAdvancedCharts(data);
+
+  } catch (err) { console.error("Failed parsing CTI metrics pipeline data:", err); }
+}
+
+/* =========================================================
+   FACETED SEARCH LOGIC
+   ========================================================= */
+window.toggleEntityFilter = function(val, checkboxId) {
+    const index = state.entities.indexOf(val);
+    if (index > -1) {
+        state.entities.splice(index, 1);
+        if(el(checkboxId)) el(checkboxId).checked = false;
+    } else {
+        state.entities.push(val);
+        if(el(checkboxId)) el(checkboxId).checked = true;
+    }
+    state.page = 1; loadThreats(); loadStats(); renderActivePills();
+};
+
+window.removeEntityFilter = function(val) {
+    const index = state.entities.indexOf(val);
+    if (index > -1) state.entities.splice(index, 1);
+    state.page = 1; loadThreats(); loadStats(); renderActivePills(); renderSidebarLists(); 
+};
+
+window.clearAllEntities = function() {
+    state.entities = []; state.page = 1; loadThreats(); loadStats(); renderActivePills(); renderSidebarLists();
+};
+
+function renderActivePills() {
+    const container = el("active-filters-container");
+    if (state.entities.length === 0) { container.classList.add("hidden"); container.innerHTML = ""; return; }
+    container.classList.remove("hidden");
+    let html = `<span style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);text-transform:uppercase;">Active Filters:</span>`;
+    state.entities.forEach(ent => { html += `<div class="filter-pill"><span>${esc(ent)}</span><div class="pill-close" onclick="removeEntityFilter('${esc(ent)}')">✕</div></div>`; });
+    html += `<div class="clear-all" onclick="clearAllEntities()">Clear All</div>`;
+    container.innerHTML = html;
+}
+
+function renderSidebarLists(hashFilter = "") {
+    const e = ALL_ENTITIES;
+    const fill = (id, list) => {
+        const container = el(id);
+        if(!list || !list.length){ container.innerHTML = `<li style="color:var(--text-muted);font-style:italic">none</li>`; return; }
+        let html = "";
+        list.slice(0, CONFIG.entitiesShown).forEach((x, i) => {
+            const isChecked = state.entities.includes(x) ? 'checked' : '';
+            const cbId = `cb-${id}-${i}`;
+            html += `<li><label class="ent-label"><input type="checkbox" id="${cbId}" ${isChecked} onchange="toggleEntityFilter('${esc(x)}', '${cbId}')">${esc(x)}</label></li>`;
+        });
+        container.innerHTML = html;
+    };
+
+    fill("ent-threat-actors", e.threat_actors); fill("ent-malware", e.malware); fill("ent-tools", e.tools); fill("ent-technologies", e.technologies); fill("ent-industries", e.industries); fill("ent-attack-techniques", e.attack_techniques); fill("ent-mitre", e.mitre_techniques); fill("ent-vulnerabilities", e.vulnerabilities); fill("ent-domains", e.domains); fill("ent-ips", e.ips); fill("ent-urls", e.urls);
+    let allHashes = [...(e.md5 || []), ...(e.sha1 || []), ...(e.sha256 || [])];
+    if (hashFilter) { allHashes = allHashes.filter(h => h.toLowerCase().includes(hashFilter.toLowerCase())); }
+    fill("ent-hashes", allHashes);
+}
+
+async function loadEntities(){ try{ ALL_ENTITIES = await getJSON(`${API()}/entities`); renderSidebarLists(); }catch(err){ console.warn("entities load failed:", err); } }
+
+/* =========================================================
+   CORE DATA LOADING
+   ========================================================= */
+async function loadStats(){
+  const params = new URLSearchParams();
+  if(state.q) params.set("q",state.q); if(state.severity) params.set("severity",state.severity); if(state.category) params.set("category",state.category); if(state.entities.length > 0) params.set("entities", state.entities.join(","));
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  try{
+    const s = await getJSON(`${API()}/threats/stats${qs}`);
+    el("stat-total").textContent = s.total.toLocaleString();
+    // Show filtered attribute count in header alongside NER record count.
+    if (s.raw_ioc_count && s.raw_ioc_count > 0) {
+      el('source-line').textContent = `${s.raw_ioc_count.toLocaleString()} filtered attributes  |  ${s.total.toLocaleString()} NER-enriched records`;
+    }
+    el("sev-critical").textContent = (s.by_severity.critical??0).toLocaleString();
+    el("sev-high").textContent     = (s.by_severity.high??0).toLocaleString();
+    el("sev-medium").textContent   = (s.by_severity.medium??0).toLocaleString();
+    el("sev-low").textContent      = (s.by_severity.low??0).toLocaleString();
+    el("by-category").innerHTML = Object.entries(s.by_category).slice(0, CONFIG.categoriesShown).map(([k,v])=>`<li class="cat-item"><span class="cat-name">${esc(k)}</span><span class="cat-count">${v.toLocaleString()}</span></li>`).join("");
+
+    if (!isCategoryDropdownPopulated) {
+        el("filter-category").innerHTML = `<option value="">All categories</option>` + Object.keys(s.by_category).map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join("");
+        isCategoryDropdownPopulated = true;
+    }
+  }catch(e){ console.error(e); }
+}
+
+async function loadThreats(){
+  const params = new URLSearchParams({ page:state.page, page_size:state.pageSize });
+  if(state.q) params.set("q",state.q); if(state.severity) params.set("severity",state.severity); if(state.category) params.set("category",state.category); if(state.entities.length > 0) params.set("entities", state.entities.join(","));
+  try{
+    const data = await getJSON(`${API()}/threats?${params}`);
+    if(!data.items.length){ el("threats-tbody").innerHTML = `<tr><td colspan="6" style="text-align:center;padding:48px;color:var(--text-muted);font-family:var(--font-mono);font-size:12px">No matches found for active filters.</td></tr>`; } 
+    else {
+      el("threats-tbody").innerHTML = data.items.map(a => {
+        let cleanInfo = a.event_info || ""; if (cleanInfo.includes("Context: ")) cleanInfo = cleanInfo.split("Context: ")[1].trim();
+        return `<tr>
+          <td>${sevBadge(a.severity)}</td><td class="cell-muted">${esc(a.category)}</td><td class="cell-dim">${esc(a.type)}</td><td class="cell-mono">${esc(a.value)}</td><td class="cell-muted" style="font-size:11px" title="${esc(cleanInfo)}">${esc(cleanInfo)}</td>
+          <td><button class="pill" style="cursor:pointer; background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent); padding:4px 8px; border-radius:12px; font-family:var(--font-mono); font-size:10px; transition:all 0.15s;" onmouseover="this.style.background='var(--accent)'; this.style.color='#fff';" onmouseout="this.style.background='var(--accent-dim)'; this.style.color='var(--accent)';" onclick="startPivotInvestigation('${a.id || a.uuid}', '${esc(cleanInfo).replace(/'/g, "\\'")}', 0)">Investigate</button></td>
+        </tr>`;
+      }).join("");
+    }
+    el("page-label").textContent = `Page ${data.page} of ${Math.ceil(data.total/state.pageSize)||1}`;
+    el("prev-btn").disabled = state.page<=1; el("next-btn").disabled = (state.page*state.pageSize)>=data.total;
+  }catch(e){ el("threats-tbody").innerHTML = `<tr><td colspan="6"><div class="error-state">Failed: ${esc(e.message)}</div></td></tr>`; }
+}
+
+/* =========================================================
+   PIVOT GRAPH LOGIC (SEED & EXPAND)
+   ========================================================= */
+let pivotGraphState = { nodes: [], links: [] }; let myPivotGraph = null;
+
+window.startPivotInvestigation = function(seedId, seedLabel, seedGroup = 0) {
+    el("threats-table-container").style.display = "none"; el("pivot-graph-wrapper").style.display = "flex";
+    const container = el("pivot-graph-container"); container.innerHTML = "";
+    pivotGraphState = { nodes: [{ id: seedId, label: seedLabel, group: seedGroup, expanded: false }], links: [] };
+    
+    myPivotGraph = ForceGraph()(container)
+        .graphData(pivotGraphState)
+        .backgroundColor('#080f1d')
+        .nodeId('id')
+        .nodeLabel(n => `<div style="background:#0d1626;padding:8px;border:1px solid #1c2d4a;border-radius:4px;color:#dce8f8;font-family:'IBM Plex Mono';font-size:11px;">${esc(n.label)}</div>`)
+        .nodeCanvasObject((node, ctx, globalScale) => {
+            const isRoot = node.group === 0;
+            const size = isRoot ? 8 : 5;
+            const color = isRoot ? '#ffffff' : 
+                          node.group === 1 ? '#ef4444' : 
+                          node.group === 2 ? '#f59e0b' : 
+                          node.group === 3 ? '#00b4d8' : 
+                          node.group === 4 ? '#a78bfa' : '#6b87ad';
+
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false);
+            ctx.fillStyle = color;
+            ctx.fill();
+
+            if (globalScale >= 0.8 || isRoot) {
+                const fontSize = isRoot ? 12 / globalScale : 10 / globalScale;
+                ctx.font = `${fontSize}px "IBM Plex Mono"`;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = isRoot ? '#ffffff' : 'rgba(220, 232, 248, 0.7)';
+                ctx.fillText(node.label, node.x + size + 4, node.y);
+            }
+        })
+        .linkColor(() => '#243a5e')
+        .linkWidth(1.5)
+        .onNodeClick(async node => { if (node.expanded) collapseNode(node); else await expandNode(node); });
+        
+    // TUNE PHYSICS TO FIX HAIRBALL
+    myPivotGraph.d3Force('charge').strength(-400); // Stronger repulsion pushes nodes apart
+    myPivotGraph.d3Force('link').distance(120);    // Longer links gives the graph room to breathe
+};
+
+window.closePivotGraph = function() { el("pivot-graph-wrapper").style.display = "none"; el("threats-table-container").style.display = "block"; if (myPivotGraph) myPivotGraph.graphData({ nodes: [], links: [] }); };
+async function expandNode(node) {
+    node.expanded = true;
+    try {
+        const res = await fetch(`${API()}/graph/pivot?node_id=${encodeURIComponent(node.id)}`);
+        if (!res.ok) throw new Error("Pivot endpoint failed."); const data = await res.json();
+        data.nodes.forEach(n => { if (!pivotGraphState.nodes.find(existing => existing.id === n.id)) { n.parentId = node.id; n.expanded = false; pivotGraphState.nodes.push(n); } });
+        data.links.forEach(l => { if (!pivotGraphState.links.find(existing => (existing.source.id === l.source && existing.target.id === l.target) || (existing.source === l.source && existing.target === l.target))) { pivotGraphState.links.push(l); } });
+        myPivotGraph.graphData(pivotGraphState);
+    } catch (e) { node.expanded = false; }
+}
+
+function collapseNode(node) {
+    node.expanded = false;
+    const getChildren = (parentId) => { const children = pivotGraphState.nodes.filter(n => n.parentId === parentId); let allDescendants = [...children]; children.forEach(c => { allDescendants = allDescendants.concat(getChildren(c.id)); }); return allDescendants; };
+    const idsToRemove = getChildren(node.id).map(n => n.id);
+    pivotGraphState.nodes = pivotGraphState.nodes.filter(n => !idsToRemove.includes(n.id));
+    pivotGraphState.links = pivotGraphState.links.filter(l => !idsToRemove.includes(l.source.id || l.source) && !idsToRemove.includes(l.target.id || l.target));
+    myPivotGraph.graphData(pivotGraphState);
+}
+
+/* =========================================================
+   ORG PROFILE & ANALYTICS LOGIC
+   ========================================================= */
+async function loadOrgDropdown(){
+  try{
+    const profiles = await getJSON(`${API()}/profiles`);
+    const select = el("filter-org");
+    const grouped = {};
+    let html = [
+      '<option value="">⬡ Global View — Raw Intelligence Feed</option>',
+      '<option value="analytics">⬡ Global Analytics Dashboard</option>',
+    ].join("");
+
+    profiles.forEach(p=>{
+      const industry = p.industry_sector || "Other";
+      DYNAMIC_PROFILES[p.org_id] = {
+        name: p.org_name || p.org_id,
+        industry,
+        risk: p.risk_profile || "Unknown",
+        riskColor: p.risk_profile === "Critical" ? "color:var(--red)" : "color:var(--amber)",
+        assets: p.tech_stack || [],
+        mitre: p.mitre_landscape || []
+      };
+      if (!grouped[industry]) grouped[industry] = [];
+      grouped[industry].push(p);
+    });
+
+    const industryOrder = [
+      "Energy",
+      "Finance",
+      "Healthcare",
+      "Other",
+      ...Object.keys(grouped).filter(industry => !["Energy", "Finance", "Healthcare", "Other"].includes(industry)).sort()
+    ];
+    industryOrder
+      .filter(industry => grouped[industry])
+      .forEach(industry => {
+        html += `<optgroup label="${esc(industry)}">`;
+        grouped[industry]
+          .sort((a, b) => (a.org_name || a.org_id).localeCompare(b.org_name || b.org_id))
+          .forEach(p => {
+            const name = p.org_name || p.org_id;
+            const risk = p.risk_profile || "Unknown Risk";
+            html += `<option value="${esc(p.org_id)}">${esc(name)} — ${esc(risk)} (${esc(p.org_id)})</option>`;
+          });
+        html += "</optgroup>";
+      });
+
+    select.innerHTML = html;
+  }catch(e){ console.error("Failed to load profiles:", e); }
+}
+
+function updateOrgSidebar(orgId){
+  const p = DYNAMIC_PROFILES[orgId]; if(!p) return;
+  el('sidebar-org-name').textContent = p.name; el('sidebar-org-industry').textContent = p.industry; el('sidebar-org-id').textContent = orgId;
+  el('sidebar-org-risk').textContent = p.risk; el('sidebar-org-risk').style = p.riskColor+';font-family:var(--font-mono)';
+  el('sidebar-org-assets').innerHTML = p.assets.map(a=>`<span class="asset-chip">${esc(a)}</span>`).join('');
+  el('sidebar-org-mitre').innerHTML = p.mitre.map(m=>`<span class="mitre-chip">${esc(m)}</span>`).join('');
+}
+
+function renderAdvancedOrgCharts(recs) {
+    let ids = ["Threat Landscape"], labels = ["Threat Landscape"], parents = [""], values = [0];
+    let actorMap = {};
+    recs.forEach(r => {
+        let acts = (r.entities?.threat_actors?.length) ? r.entities.threat_actors : ["Unknown Adversary"];
+        let techs = (r.entities?.attack_techniques?.length) ? r.entities.attack_techniques : ["Technique not observed"];
+        acts.forEach(actor => {
+            if (!actorMap[actor]) actorMap[actor] = { count: 0, techs: {} };
+            actorMap[actor].count++;
+            techs.forEach(tech => { actorMap[actor].techs[tech] = (actorMap[actor].techs[tech] || 0) + 1; });
+        });
+    });
+
+    Object.keys(actorMap).forEach(actor => {
+        ids.push(actor); labels.push(actor); parents.push("Threat Landscape"); values.push(actorMap[actor].count);
+        Object.keys(actorMap[actor].techs).forEach(tech => {
+            ids.push(`${actor}-${tech}`); labels.push(tech); parents.push(actor); values.push(actorMap[actor].techs[tech]);
+        });
+    });
+
+    Plotly.newPlot('org-sunburst', [{
+        type: "sunburst", ids: ids, labels: labels, parents: parents, values: values,
+        outsidetextfont: {size: 10, color: "#6b87ad"}, insidetextfont: {size: 11, color: "#ffffff"},
+        marker: { line: { width: 1, color: '#0d1626' } }, textinfo: "label+value", hoverinfo: "label+value+percent parent"
+    }], { paper_bgcolor: 'rgba(0,0,0,0)', margin: {t:0, l:0, r:0, b:0}, sunburstcolorway: ["#ef4444", "#f59e0b", "#3a86ff", "#8338ec", "#00b4d8"] }, {displayModeBar: false, responsive: true});
+
+    const killChainPhases = {
+        "Initial Access": ["phishing", "spear-phishing", "watering-hole attacks", "social engineering", "drive-by compromise"],
+        "Execution": ["malicious macro", "web app exploits", "powershell", "scripting"],
+        "Credential Access": ["credential theft", "credential dumping (mimikatz)", "carding", "brute force"],
+        "Impact": ["ransomware", "encryption", "data destruction", "defacement"]
+    };
+
+    let phaseCounts = { "Initial Access": {}, "Execution": {}, "Credential Access": {}, "Impact": {} }, maxHeat = 0;
+    recs.forEach(r => {
+        (r.entities?.attack_techniques || []).forEach(tech => {
+            let tLower = tech.toLowerCase(), matchedPhase = null;
+            for (const [phase, matchers] of Object.entries(killChainPhases)) { if (matchers.some(m => tLower.includes(m))) { matchedPhase = phase; break; } }
+            if (!matchedPhase) matchedPhase = "Execution"; 
+            phaseCounts[matchedPhase][tech] = (phaseCounts[matchedPhase][tech] || 0) + 1;
+            if (phaseCounts[matchedPhase][tech] > maxHeat) maxHeat = phaseCounts[matchedPhase][tech];
+        });
+    });
+
+    const getHeatClass = (val) => { let ratio = val / (maxHeat || 1); return ratio > 0.7 ? 'heat-4' : ratio > 0.4 ? 'heat-3' : ratio > 0.1 ? 'heat-2' : 'heat-1'; };
+    let heatmapHTML = "";
+    Object.keys(killChainPhases).forEach(phase => {
+        heatmapHTML += `<div class="mitre-col"><div class="mitre-header">${phase}</div>`;
+        let items = Object.entries(phaseCounts[phase]).sort((a,b)=>b[1]-a[1]);
+        if(items.length === 0) heatmapHTML += `<div class="mitre-cell heat-0" style="color:var(--text-muted); font-style:italic;">No observations</div>`;
+        else items.forEach(([tName, tCount]) => { heatmapHTML += `<div class="mitre-cell ${getHeatClass(tCount)}">${esc(tName)} <span>[${tCount}]</span></div>`; });
+        heatmapHTML += `</div>`;
+    });
+    el('org-mitre-matrix').innerHTML = heatmapHTML;
+}
+
+function renderOrgCharts(recs) {
+    ['org-chart-scoring', 'org-chart-techniques', 'org-chart-mitre', 'org-chart-actors', 'org-chart-assets', 'org-chart-severity'].forEach(id => { if (orgChartInstances[id]) orgChartInstances[id].destroy(); });
+    const commonOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: textPrimaryColor, font: { family: 'IBM Plex Mono', size: 10 } } } } };
+    const top10 = recs.slice(0, 10);
+    
+    orgChartInstances['org-chart-scoring'] = new Chart(document.getElementById('org-chart-scoring').getContext('2d'), {
+        type: 'bar',
+        data: { labels: top10.map(r => `Rank ${r.rank}`), datasets: [ { label: 'Semantic', data: top10.map(r => r.cosine_sim * (r.severity_multiplier || 1)), backgroundColor: '#3a86ff' }, { label: 'Asset', data: top10.map(r => r.cpe_boost * (r.severity_multiplier || 1)), backgroundColor: '#22c55e' }, { label: 'Threat', data: top10.map(r => r.mitre_bonus * (r.severity_multiplier || 1)), backgroundColor: '#f59e0b' } ] },
+        options: { ...commonOptions, scales: { x: { stacked: true, grid: { display: false }, ticks: { color: '#6b87ad' } }, y: { stacked: true, grid: { color: borderMutedColor }, ticks: { color: '#6b87ad' } } } }
+    });
+
+    const techniqueCounts = {}; recs.forEach(r => { (r.entities?.attack_techniques || []).forEach(t => { techniqueCounts[t] = (techniqueCounts[t] || 0) + 1; }); });
+    orgChartInstances['org-chart-techniques'] = new Chart(document.getElementById('org-chart-techniques').getContext('2d'), {
+        type: 'polarArea',
+        data: { labels: Object.entries(techniqueCounts).sort((a,b)=>b[1]-a[1]).slice(0, 6).map(t => t[0]), datasets: [{ data: Object.entries(techniqueCounts).sort((a,b)=>b[1]-a[1]).slice(0, 6).map(t => t[1]), backgroundColor: themeColors.map(c => c + '80'), borderColor: themeColors, borderWidth: 1 }] },
+        options: { ...commonOptions, scales: { r: { grid: { color: borderMutedColor }, ticks: { display: false } } } }
+    });
+
+    const mitreCounts = {}; recs.forEach(r => { (r.mitre_matches || []).forEach(m => { mitreCounts[m.cti_technique] = (mitreCounts[m.cti_technique] || 0) + 1; }); });
+    orgChartInstances['org-chart-mitre'] = new Chart(document.getElementById('org-chart-mitre').getContext('2d'), {
+        type: 'bar',
+        data: { labels: Object.entries(mitreCounts).sort((a,b)=>b[1]-a[1]).slice(0, 8).map(m => m[0]), datasets: [{ label: 'Matches in Top 20', data: Object.entries(mitreCounts).sort((a,b)=>b[1]-a[1]).slice(0, 8).map(m => m[1]), backgroundColor: '#a78bfa' }] },
+        options: { ...commonOptions, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { grid: { color: borderMutedColor }, ticks: { color: '#6b87ad' } }, y: { grid: { display: false }, ticks: { color: '#6b87ad', font: { family: 'IBM Plex Mono' } } } } }
+    });
+
+    const actorCounts = {}; recs.forEach(r => { (r.entities?.threat_actors || []).forEach(a => { actorCounts[a] = (actorCounts[a] || 0) + 1; }); });
+    orgChartInstances['org-chart-actors'] = new Chart(document.getElementById('org-chart-actors').getContext('2d'), {
+        type: 'bar',
+        data: { labels: Object.entries(actorCounts).sort((a,b)=>b[1]-a[1]).slice(0, 8).map(a => a[0]), datasets: [{ label: 'Targeting Frequency', data: Object.entries(actorCounts).sort((a,b)=>b[1]-a[1]).slice(0, 8).map(a => a[1]), backgroundColor: '#ef4444' }] },
+        options: { ...commonOptions, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#6b87ad', font: { family: 'Space Grotesk' } } }, y: { grid: { color: borderMutedColor }, ticks: { color: '#6b87ad', stepSize: 1 } } } }
+    });
+
+    // Targeted Assets: count how many top-N threats mention each org asset (substring match both ways)
+    const orgId = el("filter-org").value;
+    const orgAssets = (DYNAMIC_PROFILES[orgId]?.assets || []).filter(a => a);
+    const assetCounts = {};
+    orgAssets.forEach(asset => {
+        const aLow = asset.toLowerCase();
+        let hits = 0;
+        recs.forEach(r => {
+            const techs = (r.entities?.technologies || []).map(t => t.toLowerCase());
+            if (techs.some(t => aLow.includes(t) || t.includes(aLow))) hits++;
+        });
+        assetCounts[asset] = hits;
+    });
+    // If nothing matched at all, show assets with equal weight so chart isn't empty
+    const totalHits = Object.values(assetCounts).reduce((a, b) => a + b, 0);
+    // Only show assets that are actually mentioned in threats (hits > 0)
+    const threatenedAssets = Object.entries(assetCounts).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]).slice(0, 8);
+    // Fallback: if nothing matched, show all assets equally so chart isn't blank
+    const chartEntries = threatenedAssets.length > 0 ? threatenedAssets : orgAssets.slice(0,5).map(a => [a, 1]);
+    orgChartInstances['org-chart-assets'] = new Chart(document.getElementById('org-chart-assets').getContext('2d'), {
+        type: 'bar',
+        data: { labels: chartEntries.map(a => a[0]), datasets: [{ label: 'Threat Mentions', data: chartEntries.map(a => a[1]), backgroundColor: '#00b4d8' }] },
+        options: { ...commonOptions, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { grid: { color: borderMutedColor }, ticks: { color: '#6b87ad', stepSize: 1 } }, y: { grid: { display: false }, ticks: { color: '#6b87ad', font: { family: 'IBM Plex Mono' } } } } }
+    });
+
+    const sevCounts = { critical: 0, high: 0, medium: 0, low: 0 }; recs.forEach(r => { const s = (r.severity || 'low').toLowerCase(); if(sevCounts[s] !== undefined) sevCounts[s]++; });
+    orgChartInstances['org-chart-severity'] = new Chart(document.getElementById('org-chart-severity').getContext('2d'), {
+        type: 'doughnut',
+        data: { labels: ['Critical', 'High', 'Medium', 'Low'], datasets: [{ data: [sevCounts.critical, sevCounts.high, sevCounts.medium, sevCounts.low], backgroundColor: ['#ef4444', '#f59e0b', '#eab308', '#22c55e'], borderWidth: 1, borderColor: '#0d1626' }] },
+        options: { ...commonOptions, cutout: '70%', plugins: { legend: { position: 'right', labels: { color: '#6b87ad', font: { family: 'IBM Plex Mono' } } } } }
+    });
+
+    renderAdvancedOrgCharts(recs);
+}
+
+function openThreatModal(idx) {
+  openRecommendationDetail(idx);
+}
+
+async function loadRecommendations(orgId){
+  CURRENT_RECS = [];
+  el('recommendation-container').innerHTML = `<div class="loading-state">Calculating relevance metrics…</div>`;
+  try{
+    const data = await getJSON(`${API()}/recommendations/${orgId}`);
+    el('rec-title').innerHTML = `Curated Threats <span>Sector: ${esc(data.industry)}</span>`;
+    el('overlap-pill').textContent = data.overlap_score != null
+      ? `Overlap@10: ${(data.overlap_score*100).toFixed(0)}%`
+      : `${data.total_recommendations || data.recommendations?.length || 0} recommendations`;
+    if(!data.recommendations?.length){ el('recommendation-container').innerHTML=`<div class="loading-state">No recommendations returned.</div>`; return; }
+
+    CURRENT_RECOMMENDATIONS = data.recommendations;
+    CURRENT_ORG_ID = orgId;
+    CURRENT_ORG_INDUSTRY = data.industry || "";
+
+    renderOrgCharts(data.recommendations);
+
+    el('recommendation-container').innerHTML = data.recommendations.map((rec, index) => {
+      const totalRaw = rec.cosine_sim + rec.cpe_boost + rec.mitre_bonus;
+      const cPct = totalRaw>0 ? (rec.cosine_sim/totalRaw)*100 : 0, pPct = totalRaw>0 ? (rec.cpe_boost/totalRaw)*100 : 0, mPct = totalRaw>0 ? (rec.mitre_bonus/totalRaw)*100 : 0;
+      const s = (rec.severity||'low').toLowerCase();
+      const actors = (rec.entities?.threat_actors||[]).map(a=>`<span class="ent-chip ent-actor">${esc(a)}</span>`).join('');
+      const techs  = (rec.entities?.technologies||[]).map(t=>`<span class="ent-chip ent-tech">${esc(t)}</span>`).join('');
+      const atks   = (rec.entities?.attack_techniques||[]).slice(0,4).map(a=>`<span class="ent-chip ent-attack">${esc(a)}</span>`).join('');
+
+      const idx = CURRENT_RECS.length;
+      CURRENT_RECS.push(rec);
+      return `<div class="rec-card" data-rec-idx="${idx}" tabindex="0" role="button" aria-label="Open threat details" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openThreatModal(${idx});}">
+        <div class="rec-top"><div class="rec-rank-badge rank-${s}">#${rec.rank}</div>${sevBadge(rec.severity)}<span class="rec-event-id">${esc(rec.event_id||'')}</span><span class="rec-score score-${s}">${rec.score.toFixed(1)}<span style="font-size:9px;color:var(--text-muted);font-weight:400"> pts</span></span></div>
+        <div class="rec-title-text">${esc(rec.title)}</div><div class="rec-summary">${esc(rec.entities?.summary||'')}</div>
+        <div class="score-bar-bg"><div class="bar-cosine" style="width:${cPct.toFixed(1)}%"></div><div class="bar-cpe" style="width:${pPct.toFixed(1)}%"></div><div class="bar-mitre" style="width:${mPct.toFixed(1)}%"></div></div>
+        <div class="score-breakdown"><div class="bd-item"><div class="bd-dot" style="background:#3a86ff"></div>cosine ${rec.cosine_sim.toFixed(3)}</div><div class="bd-item"><div class="bd-dot" style="background:#22c55e"></div>CPE +${rec.cpe_boost.toFixed(3)}</div><div class="bd-item"><div class="bd-dot" style="background:var(--amber)"></div>MITRE +${rec.mitre_bonus.toFixed(3)}</div><div class="bd-item" style="margin-left:auto">×${rec.severity_multiplier||1} sev</div></div>
+        ${(actors||techs||atks)?`<div class="ent-row">${actors}${techs}${atks}</div>`:''}
+        <button class="rec-detail-btn" onclick="event.stopPropagation();openThreatModal(${idx});">View Details</button>
+      </div>`;
+    }).join('');
+  }catch(e){ el('recommendation-container').innerHTML = `<div class="error-state">Engine Offline: ${esc(e.message)}</div>`; }
+}
+
+/* =========================================================
+   EVENTS & INIT
+   ========================================================= */
+function debounce(fn,ms){ let t; return(...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
+function bind(){
+  el("threat-detail-modal").addEventListener("click", e => { if(e.target===el("threat-detail-modal")) closeThreatModal(); });
+
+  // Open the unified threat detail modal via event delegation.
+  el("recommendation-container").addEventListener("click", e => {
+    const card = e.target.closest(".rec-card");
+    if (!card) return;
+    const idx = parseInt(card.dataset.recIdx, 10);
+    if (!isNaN(idx)) openThreatModal(idx);
+  });
+
+  el("q").addEventListener("input", debounce(()=>{ state.q=el("q").value; state.page=1; loadThreats(); loadStats(); },250));
+  el("filter-severity").addEventListener("change",()=>{ state.severity=el("filter-severity").value; state.page=1; loadThreats(); loadStats(); });
+  el("filter-category").addEventListener("change",()=>{ state.category=el("filter-category").value; state.page=1; loadThreats(); loadStats(); });
+  el("hash-search").addEventListener("input", (e) => renderSidebarLists(e.target.value));
+
+  el("filter-org").addEventListener("change",()=>{
+    const val = el("filter-org").value;
+    el("generic-filters").classList.add("hidden"); el("active-filters-container").classList.add("hidden"); el("pivot-graph-wrapper").style.display = "none"; el("recommendations-panel").classList.add("hidden"); el("threats-table-container").classList.add("hidden"); el("analytics-dashboard").classList.add("hidden");
+
+    if(val && val !== "analytics") { el("global-sidebar").classList.add("hidden"); el("org-sidebar").classList.remove("hidden"); }
+    else { el("global-sidebar").classList.remove("hidden"); el("org-sidebar").classList.add("hidden"); }
+
+    const filterPanel = el("ner-filters-panel");
+    if (filterPanel) filterPanel.style.display = (val === "" || !val) ? "" : "none";
+
+    if (val === "analytics") { el("analytics-dashboard").classList.remove("hidden"); loadAnalyticsDashboard(); }
+    else if (val) { el("recommendations-panel").classList.remove("hidden"); updateOrgSidebar(val); loadRecommendations(val); }
+    else { el("generic-filters").classList.remove("hidden"); el("threats-table-container").classList.remove("hidden"); renderActivePills(); loadThreats(); }
+  });
+
+  el("prev-btn").addEventListener("click",()=>{ if(state.page>1){ state.page--; loadThreats(); } });
+  el("next-btn").addEventListener("click",()=>{ state.page++; loadThreats(); });
+  el("refresh-btn").addEventListener("click", async()=>{
+  el("refresh-btn").disabled=true;
+  el("refresh-btn").textContent='↺ Reloading…';
+  try{
+    await fetch(`${API()}/admin/reload`,{method:"POST"});
+    isCategoryDropdownPopulated = false;
+    await Promise.all([loadStats(),loadEntities(),loadThreats(),loadPipelineStatus()]);
+    const orgId=el("filter-org").value;
+    if (orgId === "analytics") { loadAnalyticsDashboard(); }
+    else if (orgId) { await loadRecommendations(orgId); }
+    const total=el('stat-total');
+    el('status-text').textContent='Live';
+  }finally{
+    el("refresh-btn").disabled=false;
+    el("refresh-btn").textContent='↺ Reload cache';
+  }
+});
+}
+async function loadPipelineStatus(){
+  try {
+    const res = await getJSON(`${API()}/pipeline/status`);
+    (res.steps || []).forEach(step => {
+      const s = document.getElementById(`pipe-${step.id}`);
+      if (s) s.className = 'pipe-step ' + (step.done ? 'done' : 'queued');
+      // Also update mini panel chips
+      const m = document.getElementById(`pmini-${step.id}`);
+      if (m) m.className = 'pipe-mini ' + (step.done ? 'done' : '');
+    });
+  } catch(e) { console.warn('Pipeline status unavailable', e); }
+}
+
+// ── Pipeline runner ────────────────────────────────────────────────────────
+let _pipelinePoller = null;
+let _panelCollapsed = false;
+
+el('run-pipeline-btn').addEventListener('click', () => {
+  el('pipeline-modal').style.display = 'flex';
+});
+
+window.closePipelineModal = function() {
+  el('pipeline-modal').style.display = 'none';
+};
+
+window.confirmRunPipeline = async function() {
+  el('pipeline-modal').style.display = 'none';
+  try {
+    const res = await fetch(`${API()}/pipeline/run`, { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'already_running') {
+      alert('Pipeline is already running.');
+      return;
+    }
+    startPipelinePoller();
+  } catch(e) {
+    alert('Failed to start pipeline. Check the server.');
+  }
+};
+
+window.togglePipelinePanel = function() {
+  _panelCollapsed = !_panelCollapsed;
+  el('pipeline-panel-body').style.display = _panelCollapsed ? 'none' : 'block';
+  el('pipeline-panel-toggle').textContent = _panelCollapsed ? '▲' : '▼';
+};
+
+function startPipelinePoller() {
+  el('pipeline-panel').style.display = 'block';
+  el('pipeline-done-msg').style.display = 'none';
+  el('pipeline-panel-pulse').style.display = 'block';
+  el('run-pipeline-btn').disabled = true;
+  el('run-pipeline-btn').textContent = '⏳ Running...';
+
+  // Reset mini chips
+  ['fetch','filter','format','ner','normalise','stix','recommend','evaluate','ingest'].forEach(id => {
+    const m = el(`pmini-${id}`);
+    if (m) m.className = 'pipe-mini';
+  });
+
+  if (_pipelinePoller) clearInterval(_pipelinePoller);
+  _pipelinePoller = setInterval(async () => {
+    try {
+      const running = await getJSON(`${API()}/pipeline/running`);
+      el('pipeline-elapsed').textContent = `Elapsed: ${running.elapsed_seconds}s`;
+
+      // Update step chips
+      await loadPipelineStatus();
+
+      if (!running.running) {
+        clearInterval(_pipelinePoller);
+        _pipelinePoller = null;
+        el('pipeline-panel-pulse').style.display = 'none';
+        el('pipeline-done-msg').style.display = 'block';
+        el('run-pipeline-btn').disabled = false;
+        el('run-pipeline-btn').textContent = '▶ Run Pipeline';
+
+        // Auto-reload data after 2 seconds
+        setTimeout(async () => {
+          await fetch(`${API()}/admin/reload`, { method: 'POST' });
+          await Promise.all([loadStats(), loadEntities(), loadThreats(), loadPipelineStatus()]);
+          el('live-label').textContent = 'API connected — pipeline live';
+          setTimeout(() => { el('pipeline-panel').style.display = 'none'; }, 3000);
+        }, 2000);
+      }
+    } catch(e) { console.warn('Polling error', e); }
+  }, 5000); // poll every 5 seconds
+}
+
+(async function init(){
+  bind();
+  await loadConfig();
+  await loadOrgDropdown();
+  await Promise.all([loadStats(), loadEntities(), loadThreats(), loadPipelineStatus()]);
+  el('live-label').textContent = 'API connected — pipeline live';
+  el('status-text').textContent = 'Live';
+  const total = el('stat-total');
+})();
+
+/* =========================================================
+   SOC AI CHAT — floating bubble
+   ========================================================= */
+let _chatReady = null;
+let _chatOpen = false;
+let _chatInitDone = false;
+
+function toggleChat() {
+  _chatOpen = !_chatOpen;
+  el("chat-window").classList.toggle("open", _chatOpen);
+  if (_chatOpen && !_chatInitDone) { _chatInitDone = true; initChat(); }
+}
+
+async function initChat() {
+  try {
+    const h = await fetch(`${API()}/health`);
+    const data = await h.json();
+    _chatReady = data.rag_available === true;
+  } catch(e) { _chatReady = false; }
+  updateChatBadge();
+}
+
+function updateChatBadge() {
+  const badge = el("chat-rag-badge");
+  const fab = el("chat-fab-badge");
+  const input = el("chat-input");
+  const btn = el("chat-send-btn");
+  if (_chatReady) {
+    badge.textContent = "● RAG ONLINE";
+    badge.style.color = "var(--green)";
+    fab.style.display = "block";
+    input.disabled = false;
+    btn.disabled = false;
+    btn.style.opacity = "1";
+  } else {
+    badge.textContent = "○ RAG OFFLINE";
+    badge.style.color = "var(--text-muted)";
+    fab.style.display = "none";
+    input.disabled = true;
+    btn.disabled = true;
+    btn.style.opacity = "0.4";
+    appendMessage("assistant", "⚠ RAG chat is offline — add GROQ_API_KEY to .env and restart.");
+  }
+}
+
+function appendMessage(role, text, sources = []) {
+  const box = el("chat-messages");
+  const wrap = document.createElement("div");
+  wrap.className = `chat-msg chat-msg--${role}`;
+
+  const bubble = document.createElement("div");
+  bubble.className = "chat-bubble";
+  bubble.textContent = text;
+  wrap.appendChild(bubble);
+
+  if (sources.length) {
+    const src = document.createElement("div");
+    src.className = "chat-sources";
+    sources.slice(0, 4).forEach(s => {
+      const tag = document.createElement("span");
+      tag.className = "chat-source-tag";
+      tag.textContent = s.label || s.content?.slice(0, 60);
+      tag.title = s.content || "";
+      src.appendChild(tag);
+    });
+    wrap.appendChild(src);
+  }
+
+  box.appendChild(wrap);
+  box.scrollTop = box.scrollHeight;
+  return wrap;
+}
+
+function addThinking() {
+  const box = el("chat-messages");
+  const wrap = document.createElement("div");
+  wrap.className = "chat-msg chat-msg--assistant";
+  wrap.innerHTML = `<div class="chat-thinking"><span></span><span></span><span></span></div>`;
+  box.appendChild(wrap);
+  box.scrollTop = box.scrollHeight;
+  return wrap;
+}
+
+async function sendChat() {
+  if (!_chatReady) return;
+  const input = el("chat-input");
+  const query = input.value.trim();
+  if (!query) return;
+
+  input.value = "";
+  appendMessage("user", query);
+
+  const btn = el("chat-send-btn");
+  btn.disabled = true;
+  btn.style.opacity = "0.5";
+  const thinking = addThinking();
+
+  try {
+    const res = await fetch(`${API()}/threats/query`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query })
+    });
+    const data = await res.json();
+    thinking.remove();
+    if (res.ok && data.status === "success") {
+      appendMessage("assistant", data.answer, data.sources || []);
+    } else {
+      appendMessage("assistant", `Error: ${typeof data.detail === 'string' ? data.detail : data.answer || JSON.stringify(data.detail) || "Unknown error"}`);
+    }
+  } catch(e) {
+    thinking.remove();
+    appendMessage("assistant", `Network error: ${e.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.style.opacity = "1";
+    input.focus();
+  }
+}
+</script>
+
+<!-- Floating chat bubble -->
+<button id="chat-fab" onclick="toggleChat()" title="SOC AI Analyst">
+  <div id="chat-fab-badge"></div>
+  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg>
+</button>
+
+<!-- Floating chat window -->
+<div id="chat-window">
+  <div id="chat-header">
+    <div>
+      <div style="font-family:'Space Grotesk';font-size:14px;font-weight:600;color:var(--text-primary);">SOC AI Analyst</div>
+      <div id="chat-rag-badge" style="font-family:var(--font-mono);font-size:9px;letter-spacing:1px;color:var(--text-muted);margin-top:2px;">CHECKING…</div>
+    </div>
+    <button id="chat-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div id="chat-messages">
+    <div class="chat-msg chat-msg--assistant">
+      <div class="chat-bubble">Hello. I'm your SOC AI Analyst. Ask me about threat actors, malware, CVEs, or any organization's risk profile.</div>
+    </div>
+  </div>
+  <div id="chat-footer">
+    <textarea id="chat-input" rows="2" placeholder="Ask about threats, CVEs, actors…"
+      style="flex:1;resize:none;background:var(--bg2);border:1px solid var(--border-hi);border-radius:var(--r);padding:9px 12px;color:var(--text-primary);font-family:var(--font-mono);font-size:12px;line-height:1.5;outline:none;transition:border .2s;"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+    <button onclick="sendChat()" id="chat-send-btn"
+      style="padding:9px 16px;background:var(--accent);border:none;border-radius:var(--r);color:#fff;font-family:'Space Grotesk';font-size:13px;font-weight:600;cursor:pointer;transition:opacity .2s;">
+      ↵
+    </button>
+  </div>
+</div>
+
+</body>
+</html>

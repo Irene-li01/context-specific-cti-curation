@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "org_id": "ORG-CL-001",
+    "last_updated": "2026-05-06T00:00:00Z"
+  },
+  "organizational_context": {
+    "industry_sector": "Other",
+    "geographic_location": ["Australia"]
+  },
+  "technology_stack": {
+    "inventory_type": "CPE_List",
+    "assets": [
+      { "asset_name": "Toast POS System", "cpe": "cpe:2.3:a:toasttab:toast_pos:-:*:*:*:*:*:*:*", "criticality": 5 },
+      { "asset_name": "Oracle MICROS POS", "cpe": "cpe:2.3:a:oracle:micros_pos:2.9:*:*:*:*:*:*:*", "criticality": 5 },
+      { "asset_name": "Windows 10 Workstation", "cpe": "cpe:2.3:o:microsoft:windows_10:-:*:*:*:*:*:*:*", "criticality": 3 },
+      { "asset_name": "Lightspeed Inventory", "cpe": "cpe:2.3:a:lightspeedhq:lightspeed_restaurant:-:*:*:*:*:*:*:*", "criticality": 4 }
+    ]
+  },
+  "risk_profile": {
+    "critical_assets": ["POS Payment Systems", "Customer Loyalty Database", "Supplier Payment Records"],
+    "threat_landscape": ["T1566 - Phishing", "T1110 - Brute Force", "FIN7", "ransomware", "phishing"]
+  }
+}

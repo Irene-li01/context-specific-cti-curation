@@ -1,0 +1,5 @@
+# Use the root requirements.txt to install all dependencies.
+# This file is kept for reference only — the Dockerfile and pip install
+# both use ../requirements.txt which covers the full dependency set.
+#
+# pip install -r requirements.txt   (from repo root)

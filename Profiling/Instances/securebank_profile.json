@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "org_id": "ORG-SB-99",
+    "last_updated": "2026-03-19T11:30:00Z"
+  },
+  "organizational_context": {
+    "industry_sector": "Finance",
+    "geographic_location": ["Global"]
+  },
+  "technology_stack": {
+    "inventory_type": "CPE_List",
+    "assets": [
+      { "asset_name": "SWIFT Gateway", "cpe": "cpe:2.3:a:swift:alliance_gateway:7.4:*:*:*:*:*:*:*", "criticality": 5 },
+      { "asset_name": "Oracle Database", "cpe": "cpe:2.3:a:oracle:database_server:19c:*:*:*:*:*:*:*", "criticality": 4 }
+    ]
+  },
+  "risk_profile": {
+    "critical_assets": [
+      "Customer Financial Records",
+      "Transaction Processing",
+      "SWIFT Payment Operations",
+      "Online Banking Authentication"
+    ],
+    "threat_landscape": [
+      "T1110 - Brute Force",
+      "T1078 - Valid Accounts",
+      "T1003 - Credential Dumping",
+      "T1190 - Exploit Public-Facing Application",
+      "T1566 - Phishing",
+      "FIN7",
+      "Carbanak",
+      "Cobalt Group",
+      "banking trojan",
+      "credential access",
+      "financial fraud"
+    ]
+  }
+}

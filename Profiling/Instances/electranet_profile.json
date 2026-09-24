@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "org_id": "ORG-EN-001",
+    "last_updated": "2026-03-19T10:00:00Z"
+  },
+  "organizational_context": {
+    "industry_sector": "Energy",
+    "geographic_location": ["South Australia"]
+  },
+  "technology_stack": {
+    "inventory_type": "CPE_List",
+    "assets": [
+      { "asset_name": "Siemens WinCC", "cpe": "cpe:2.3:a:siemens:wincc:7.5:*:*:*:*:*:*:*", "criticality": 5 },
+      { "asset_name": "Power Grid Controller", "cpe": "cpe:2.3:h:schneider-electric:modicon_m580:-:*:*:*:*:*:*:*", "criticality": 5 }
+    ]
+  },
+  "risk_profile": {
+    "critical_assets": ["SCADA Systems", "Transmission Grid Data"],
+    "threat_landscape": ["T1078 - Valid Accounts", "APT33", "Turla", "APT28", "Sofacy", "ransomware", "phishing"]
+  }
+}

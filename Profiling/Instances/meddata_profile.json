@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "org_id": "ORG-HC-002",
+    "last_updated": "2026-05-06T00:00:00Z"
+  },
+  "organizational_context": {
+    "industry_sector": "Healthcare",
+    "geographic_location": ["Australia"]
+  },
+  "technology_stack": {
+    "inventory_type": "CPE_List",
+    "assets": [
+      { "asset_name": "Cerner EHR Platform", "cpe": "cpe:2.3:a:cerner:millennium:-:*:*:*:*:*:*:*", "criticality": 5 },
+      { "asset_name": "MySQL Database", "cpe": "cpe:2.3:a:mysql:mysql:8.0:*:*:*:*:*:*:*", "criticality": 4 },
+      { "asset_name": "VMware vSphere", "cpe": "cpe:2.3:a:vmware:vsphere:7.0:*:*:*:*:*:*:*", "criticality": 4 },
+      { "asset_name": "Splunk SIEM", "cpe": "cpe:2.3:a:splunk:splunk:9.0:*:*:*:*:*:*:*", "criticality": 3 }
+    ]
+  },
+  "risk_profile": {
+    "critical_assets": ["Clinical Analytics Platform", "Patient Data Warehouse", "Research Datasets"],
+    "threat_landscape": ["T1486 - Data Encrypted for Impact", "T1078 - Valid Accounts", "Black Vine", "ransomware", "phishing"]
+  }
+}
